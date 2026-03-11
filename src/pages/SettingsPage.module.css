@@ -1,0 +1,218 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Calorie target input */
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calorieInput {
+  width: 100px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: right;
+  background: var(--color-bg-secondary);
+}
+
+.calorieInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.unit {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+}
+
+/* Day override row */
+.dayRow {
+  display: flex;
+  gap: 6px;
+}
+
+.dayButton {
+  flex: 1;
+  aspect-ratio: 1;
+  max-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.dayButton.hasOverride {
+  background: #ecfdf5;
+  color: var(--color-primary-dark);
+}
+
+.dayButton.selected {
+  border-color: var(--color-primary);
+  background: #ecfdf5;
+  color: var(--color-primary-dark);
+}
+
+.overrideEditor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.overrideLabel {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.resetButton {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.resetButton:hover {
+  background: var(--color-border);
+}
+
+/* Weekly average */
+.averageBox {
+  padding: 12px;
+  background: #ecfdf5;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--color-primary-dark);
+}
+
+.averageBox strong {
+  font-size: 18px;
+}
+
+/* Data management */
+.dataButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dataButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.dataButton:hover {
+  background: var(--color-border);
+}
+
+.dataButton.danger {
+  color: var(--color-red);
+}
+
+/* Confirm dialog overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+
+.dialog {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: var(--shadow-md);
+}
+
+.dialog h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.dialog p {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 20px;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.dialogCancel {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--color-bg-secondary);
+}
+
+.dialogConfirm {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: var(--color-red);
+}
+
+.dialogConfirmSafe {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: var(--color-primary);
+}
