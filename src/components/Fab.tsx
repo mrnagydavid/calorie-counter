@@ -1,19 +1,25 @@
 import { useState } from 'preact/hooks'
+import { route } from 'preact-router'
 import styles from './Fab.module.css'
 
 interface FabProps {
   date: string
 }
 
-export function Fab({ date: _date }: FabProps) {
+export function Fab({ date }: FabProps) {
   const [open, setOpen] = useState(false)
+
+  const go = (path: string) => {
+    setOpen(false)
+    route(path)
+  }
 
   return (
     <>
       {open && <div class={styles.backdrop} onClick={() => setOpen(false)} />}
       {open && (
         <div class={styles.menu}>
-          <button class={styles.menuItem} onClick={() => setOpen(false)}>
+          <button class={styles.menuItem} onClick={() => go(`/add-intake/${date}`)}>
             Manual Entry
           </button>
           <button class={styles.menuItem} onClick={() => setOpen(false)}>

@@ -3,6 +3,7 @@ import { BottomNav } from './components/BottomNav'
 import { Dashboard } from './pages/Dashboard'
 import { History } from './pages/History'
 import { SettingsPage } from './pages/SettingsPage'
+import { AddIntakePage } from './pages/AddIntakePage'
 import styles from './app.module.css'
 
 export function App() {
@@ -13,6 +14,7 @@ export function App() {
           <Route path="/" component={Dashboard} />
           <Route path="/history" component={History} />
           <Route path="/settings" component={SettingsPage} />
+          <Route path="/add-intake/:date" component={AddIntakePage} />
         </Router>
       </main>
       <BottomNav />
