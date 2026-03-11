@@ -25,7 +25,7 @@ export function Fab({ date }: FabProps) {
           <button class={styles.menuItem} onClick={() => setOpen(false)}>
             Scan Barcode
           </button>
-          <button class={styles.menuItem} onClick={() => setOpen(false)}>
+          <button class={styles.menuItem} onClick={() => go(`/add-burn/${date}`)}>
             Burned Calories
           </button>
         </div>
