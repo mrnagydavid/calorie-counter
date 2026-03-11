@@ -1,0 +1,38 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.barTrack {
+  height: 14px;
+  background: var(--color-bg-secondary);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.numbers {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.remaining {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.remainingLabel {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}

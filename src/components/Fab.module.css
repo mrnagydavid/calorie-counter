@@ -1,0 +1,62 @@
+.fab {
+  position: fixed;
+  bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom));
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  z-index: 90;
+  transition: transform 0.2s;
+}
+
+.fab:hover {
+  transform: scale(1.05);
+}
+
+.fab.open {
+  transform: rotate(45deg);
+}
+
+.fab svg {
+  width: 28px;
+  height: 28px;
+}
+
+.menu {
+  position: fixed;
+  bottom: calc(var(--nav-height) + 84px + env(safe-area-inset-bottom));
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 90;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.menuItem:hover {
+  background: var(--color-bg-secondary);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
