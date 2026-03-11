@@ -1,0 +1,34 @@
+{
+  "name": "calorie-counter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "oxlint src/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "packageManager": "pnpm@10.15.1",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "dependencies": {
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
+    "html5-qrcode": "^2.3.8",
+    "preact": "^10.28.4",
+    "preact-router": "^4.1.2"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.3",
+    "oxlint": "^1.52.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}

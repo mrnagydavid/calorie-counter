@@ -1,0 +1,7 @@
+spec.md
+settings.local.json
+node_modules
+.pnpm-store
+dist
+.vite
+*.local

@@ -1,0 +1,21 @@
+import Router, { Route } from 'preact-router'
+import { BottomNav } from './components/BottomNav'
+import { Dashboard } from './pages/Dashboard'
+import { History } from './pages/History'
+import { SettingsPage } from './pages/SettingsPage'
+import styles from './app.module.css'
+
+export function App() {
+  return (
+    <>
+      <main class={styles.page}>
+        <Router>
+          <Route path="/" component={Dashboard} />
+          <Route path="/history" component={History} />
+          <Route path="/settings" component={SettingsPage} />
+        </Router>
+      </main>
+      <BottomNav />
+    </>
+  )
+}
