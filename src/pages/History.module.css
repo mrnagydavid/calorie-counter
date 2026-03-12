@@ -1,0 +1,131 @@
+.page {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+}
+
+.headerTitle {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Month navigation */
+.monthNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 12px;
+}
+
+.monthArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.monthArrow:hover:not(.disabled) {
+  background: var(--color-bg-secondary);
+}
+
+.monthArrow.disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.monthArrow svg {
+  width: 22px;
+  height: 22px;
+}
+
+.monthLabel {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Day list */
+.dayList {
+  display: flex;
+  flex-direction: column;
+}
+
+.dayRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  width: 100%;
+}
+
+.dayRow:hover {
+  background: var(--color-bg-secondary);
+}
+
+.dayRowEmpty {
+  opacity: 0.4;
+}
+
+.dayInfo {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 56px;
+}
+
+.dayName {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  width: 28px;
+}
+
+.dayNum {
+  font-size: 16px;
+  font-weight: 600;
+  width: 24px;
+  text-align: right;
+}
+
+.dayMiddle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dayCalories {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.daySeparator {
+  color: var(--color-text-secondary);
+  margin: 0 2px;
+}
+
+.dash {
+  color: var(--color-text-secondary);
+}
+
+/* Mini progress bar */
+.miniBarTrack {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.miniBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}

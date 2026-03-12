@@ -11,7 +11,10 @@ import { BarcodeScanner } from '../components/BarcodeScanner'
 import styles from './Dashboard.module.css'
 
 export function Dashboard() {
-  const [date, setDate] = useState(todayString)
+  const [date, setDate] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('date') || todayString()
+  })
   const [scanning, setScanning] = useState(false)
 
   useEffect(() => {
