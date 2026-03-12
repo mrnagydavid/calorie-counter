@@ -12,18 +12,40 @@ interface RecentFood {
   name: string
   unitCalories: number
   quantity: number
+  unit: string
+}
+
+const UNITS = ['100g', '100ml', 'total', 'piece'] as const
+
+function quantityLabel(unit: string): string {
+  if (unit === '100g') return 'g'
+  if (unit === '100ml') return 'ml'
+  if (unit === 'piece') return 'piece(s)'
+  return unit
+}
+
+function computeTotal(unit: string, cal: number, qty: number): number {
+  if (unit === 'total') return cal
+  if (unit === '100g' || unit === '100ml') return Math.round(cal * qty / 100)
+  return Math.round(cal * qty)
+}
+
+function computeDbQuantity(unit: string, qty: number): number {
+  if (unit === 'total') return 1
+  if (unit === '100g' || unit === '100ml') return qty / 100
+  return qty
 }
 
 export function AddIntakePage({ date = '' }: AddIntakePageProps) {
   const barcode = new URLSearchParams(window.location.search).get('barcode') || ''
   const hasBarcode = barcode.length > 0
 
-  const [unitCalories, setUnitCalories] = useState('')
-  const [quantity, setQuantity] = useState(1)
-  const [name, setName] = useState('')
-  const [saveAsCustom, setSaveAsCustom] = useState(hasBarcode)
   const [unit, setUnit] = useState('100g')
   const [customUnit, setCustomUnit] = useState('')
+  const [unitCalories, setUnitCalories] = useState('')
+  const [quantity, setQuantity] = useState('100')
+  const [name, setName] = useState('')
+  const [saveAsCustom, setSaveAsCustom] = useState(hasBarcode)
 
   const allIntakes = useLiveQuery(() =>
     db.intakeEntries.orderBy('createdAt').reverse().toArray(),
@@ -40,6 +62,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         name: entry.name,
         unitCalories: entry.unitCalories,
         quantity: entry.quantity,
+        unit: entry.unit,
       })
       if (result.length >= 10) break
     }
@@ -47,28 +70,48 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
   }, [allIntakes])
 
   const cal = parseInt(unitCalories, 10) || 0
-  const total = Math.round(cal * quantity)
+  const qty = parseFloat(quantity) || 0
+  const resolvedUnit = unit === 'custom' ? (customUnit.trim() || 'portion') : unit
+  const total = computeTotal(resolvedUnit, cal, qty)
+  const isTotal = unit === 'total'
+  const showQuantity = !isTotal
 
   const canSubmit = cal > 0 && (!saveAsCustom || name.trim().length > 0)
+
+  const handleUnitChange = useCallback((newUnit: string) => {
+    setUnit(newUnit)
+    if (newUnit === '100g' || newUnit === '100ml') {
+      setQuantity('100')
+    } else if (newUnit === 'total') {
+      setQuantity('1')
+    } else if (newUnit === 'piece' || newUnit === 'custom') {
+      setQuantity('1')
+    }
+  }, [])
 
   const handleRecentTap = useCallback((item: RecentFood) => {
     setName(item.name)
     setUnitCalories(String(item.unitCalories))
-    setQuantity(item.quantity)
+    setUnit(item.unit)
+    if (item.unit === '100g' || item.unit === '100ml') {
+      setQuantity(String(Math.round(item.quantity * 100)))
+    } else if (item.unit === 'total') {
+      setQuantity('1')
+    } else {
+      setQuantity(String(item.quantity))
+    }
   }, [])
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return
     const entryName = name.trim() || `${total} kcal`
 
-    const resolvedUnit = unit === 'custom' ? (customUnit.trim() || 'portion') : unit
-
     await db.intakeEntries.add({
       id: crypto.randomUUID(),
       date,
       name: entryName,
       calories: total,
-      quantity,
+      quantity: computeDbQuantity(resolvedUnit, qty),
       unitCalories: cal,
       unit: resolvedUnit,
       source: hasBarcode ? 'barcode' : 'manual',
@@ -81,14 +124,14 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         id: crypto.randomUUID(),
         name: name.trim(),
         caloriesPerUnit: cal,
-        unit: unit === 'custom' ? (customUnit.trim() || 'portion') : unit,
+        unit: resolvedUnit,
         barcode: hasBarcode ? barcode : undefined,
         lastUsed: new Date().toISOString(),
       })
     }
 
     route('/')
-  }, [canSubmit, date, name, total, quantity, cal, saveAsCustom, unit, customUnit])
+  }, [canSubmit, date, name, total, qty, cal, resolvedUnit, saveAsCustom, hasBarcode, barcode])
 
   return (
     <div class={styles.page}>
@@ -119,8 +162,50 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         </div>
       )}
 
+      {/* 1. Unit selector */}
       <div class={styles.section}>
-        <div class={styles.fieldLabel}>Calories per unit</div>
+        <div class={styles.fieldLabel}>Unit</div>
+        <div class={styles.unitOptions}>
+          {UNITS.map((opt) => (
+            <label key={opt} class={styles.unitOption}>
+              <input
+                type="radio"
+                name="unit"
+                value={opt}
+                checked={unit === opt}
+                onChange={() => handleUnitChange(opt)}
+              />
+              {opt}
+            </label>
+          ))}
+          <label class={styles.unitOption}>
+            <input
+              type="radio"
+              name="unit"
+              value="custom"
+              checked={unit === 'custom'}
+              onChange={() => handleUnitChange('custom')}
+            />
+            <input
+              type="text"
+              class={styles.unitCustomInput}
+              value={customUnit}
+              onInput={(e) => {
+                setCustomUnit((e.target as HTMLInputElement).value)
+                setUnit('custom')
+              }}
+              onFocus={() => setUnit('custom')}
+              placeholder="custom"
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* 2. Calories per unit */}
+      <div class={styles.section}>
+        <div class={styles.fieldLabel}>
+          {isTotal ? 'Total calories' : `Calories per ${resolvedUnit}`}
+        </div>
         <div class={styles.inputRow}>
           <input
             type="number"
@@ -128,6 +213,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
             class={styles.calorieInput}
             value={unitCalories}
             onInput={(e) => setUnitCalories((e.target as HTMLInputElement).value)}
+            onFocus={(e) => (e.target as HTMLInputElement).select()}
             placeholder="0"
             min="0"
           />
@@ -135,27 +221,27 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         </div>
       </div>
 
-      <div class={styles.section}>
-        <div class={styles.fieldLabel}>Quantity</div>
-        <div class={styles.stepper}>
-          <button
-            class={styles.stepperButton}
-            onClick={() => setQuantity(Math.max(0.5, quantity - 0.5))}
-          >
-            -
-          </button>
-          <span class={styles.stepperValue}>{quantity}</span>
-          <button
-            class={styles.stepperButton}
-            onClick={() => setQuantity(quantity + 0.5)}
-          >
-            +
-          </button>
+      {/* 3. Quantity (hidden for "total") */}
+      {showQuantity && (
+        <div class={styles.section}>
+          <div class={styles.fieldLabel}>Quantity ({quantityLabel(resolvedUnit)})</div>
+          <div class={styles.inputRow}>
+            <input
+              type="number"
+              class={styles.calorieInput}
+              value={quantity}
+              onInput={(e) => setQuantity((e.target as HTMLInputElement).value)}
+              onFocus={(e) => (e.target as HTMLInputElement).select()}
+              min="0"
+            />
+            <span class={styles.unit}>{quantityLabel(resolvedUnit)}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <div class={styles.total}>Total: {total} kcal</div>
 
+      {/* 4. Save as custom food */}
       <div class={styles.checkboxRow}>
         <input
           type="checkbox"
@@ -166,72 +252,19 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         <label for="saveCustom">Save as custom food</label>
       </div>
 
-      {saveAsCustom && (
-        <div class={styles.customFoodFields}>
-          <div>
-            <div class={styles.fieldLabel}>
-              Name <span class={styles.required}>*</span>
-            </div>
-            <input
-              type="text"
-              class={styles.textInput}
-              value={name}
-              onInput={(e) => setName((e.target as HTMLInputElement).value)}
-              placeholder="e.g. Chicken salad"
-            />
-          </div>
-          <div>
-            <div class={styles.fieldLabel}>Unit</div>
-            <div class={styles.unitOptions}>
-              {['100g', '100ml', 'piece'].map((opt) => (
-                <label key={opt} class={styles.unitOption}>
-                  <input
-                    type="radio"
-                    name="unit"
-                    value={opt}
-                    checked={unit === opt}
-                    onChange={() => setUnit(opt)}
-                  />
-                  {opt}
-                </label>
-              ))}
-              <label class={styles.unitOption}>
-                <input
-                  type="radio"
-                  name="unit"
-                  value="custom"
-                  checked={unit === 'custom'}
-                  onChange={() => setUnit('custom')}
-                />
-                <input
-                  type="text"
-                  class={styles.unitCustomInput}
-                  value={customUnit}
-                  onInput={(e) => {
-                    setCustomUnit((e.target as HTMLInputElement).value)
-                    setUnit('custom')
-                  }}
-                  onFocus={() => setUnit('custom')}
-                  placeholder="custom"
-                />
-              </label>
-            </div>
-          </div>
+      {/* 5. Name */}
+      <div class={styles.section}>
+        <div class={styles.fieldLabel}>
+          Name {saveAsCustom ? <span class={styles.required}>*</span> : '(optional)'}
         </div>
-      )}
-
-      {!saveAsCustom && (
-        <div class={styles.section}>
-          <div class={styles.fieldLabel}>Name (optional)</div>
-          <input
-            type="text"
-            class={styles.textInput}
-            value={name}
-            onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            placeholder="e.g. Chicken salad"
-          />
-        </div>
-      )}
+        <input
+          type="text"
+          class={styles.textInput}
+          value={name}
+          onInput={(e) => setName((e.target as HTMLInputElement).value)}
+          placeholder="e.g. Chicken salad"
+        />
+      </div>
 
       <button class={styles.submitButton} disabled={!canSubmit} onClick={handleSubmit}>
         Add Entry

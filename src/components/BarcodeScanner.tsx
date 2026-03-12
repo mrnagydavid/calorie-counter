@@ -5,9 +5,20 @@ import { lookupBarcode, type OFFProduct, type CalorieVariant } from '../services
 import { route } from 'preact-router'
 import styles from './BarcodeScanner.module.css'
 
+export interface ScannedEntry {
+  name: string
+  calories: number
+  unitCalories: number
+  quantity: number
+  unit: string
+  barcode: string
+}
+
 interface BarcodeScannerProps {
   date: string
   onClose: () => void
+  /** If provided, calls this instead of saving to DB */
+  onAddEntry?: (entry: ScannedEntry) => void
 }
 
 type State =
@@ -28,7 +39,7 @@ function variantLabel(v: CalorieVariant): string {
   return base
 }
 
-export function BarcodeScanner({ date, onClose }: BarcodeScannerProps) {
+export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProps) {
   const [state, setState] = useState<State>({ step: 'scanning', loading: false })
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [amount, setAmount] = useState('100')
@@ -128,9 +139,11 @@ export function BarcodeScanner({ date, onClose }: BarcodeScannerProps) {
   }, [])
 
   useEffect(() => {
-    startCamera()
-    return stopCamera
-  }, [])
+    if (state.step === 'scanning' && !state.loading) {
+      startCamera()
+      return stopCamera
+    }
+  }, [state.step, state.step === 'scanning' && state.loading])
 
   const selectedVariant = state.step === 'found' ? state.product.variants[selectedIdx] : null
   const isServing = selectedVariant?.unit === 'serving'
@@ -146,19 +159,24 @@ export function BarcodeScanner({ date, onClose }: BarcodeScannerProps) {
 
     const unitCalories = selectedVariant.kcal
     const quantity = isServing ? servingQty : (parseFloat(amount) || 0) / 100
+    const entryName = [product.name, product.brand].filter(Boolean).join(' — ')
 
-    await db.intakeEntries.add({
-      id: crypto.randomUUID(),
-      date,
-      name: [product.name, product.brand].filter(Boolean).join(' — '),
-      calories: total,
-      quantity,
-      unitCalories,
-      unit: selectedVariant.unit,
-      source: 'barcode',
-      barcode,
-      createdAt: new Date().toISOString(),
-    })
+    if (onAddEntry) {
+      onAddEntry({ name: entryName, calories: total, unitCalories, quantity, unit: selectedVariant.unit, barcode })
+    } else {
+      await db.intakeEntries.add({
+        id: crypto.randomUUID(),
+        date,
+        name: entryName,
+        calories: total,
+        quantity,
+        unitCalories,
+        unit: selectedVariant.unit,
+        source: 'barcode',
+        barcode,
+        createdAt: new Date().toISOString(),
+      })
+    }
 
     if (thenScanAgain) {
       setState({ step: 'scanning', loading: false })

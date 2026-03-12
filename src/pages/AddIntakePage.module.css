@@ -124,38 +124,6 @@
   color: var(--color-text-secondary);
 }
 
-/* Quantity stepper */
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.stepperButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: var(--color-bg-secondary);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.stepperButton:hover {
-  background: var(--color-border);
-}
-
-.stepperValue {
-  font-size: 18px;
-  font-weight: 600;
-  min-width: 40px;
-  text-align: center;
-}
-
 /* Total */
 .total {
   font-size: 18px;
@@ -175,15 +143,6 @@
   width: 18px;
   height: 18px;
   accent-color: var(--color-primary);
-}
-
-.customFoodFields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-md);
 }
 
 /* Text input */
@@ -208,14 +167,14 @@
 /* Unit radio selector */
 .unitOptions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 .unitOption {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   font-size: 15px;
@@ -223,7 +182,7 @@
 }
 
 .unitOption:hover {
-  background: var(--color-border);
+  background: var(--color-bg-secondary);
 }
 
 .unitOption input[type="radio"] {
@@ -237,7 +196,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 14px;
-  width: 120px;
+  width: 100px;
   background: var(--color-surface);
 }
 
