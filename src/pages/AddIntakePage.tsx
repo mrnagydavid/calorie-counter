@@ -15,10 +15,13 @@ interface RecentFood {
 }
 
 export function AddIntakePage({ date = '' }: AddIntakePageProps) {
+  const barcode = new URLSearchParams(window.location.search).get('barcode') || ''
+  const hasBarcode = barcode.length > 0
+
   const [unitCalories, setUnitCalories] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [name, setName] = useState('')
-  const [saveAsCustom, setSaveAsCustom] = useState(false)
+  const [saveAsCustom, setSaveAsCustom] = useState(hasBarcode)
   const [unit, setUnit] = useState('100g')
   const [customUnit, setCustomUnit] = useState('')
 
@@ -65,7 +68,8 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       calories: total,
       quantity,
       unitCalories: cal,
-      source: 'manual',
+      source: hasBarcode ? 'barcode' : 'manual',
+      barcode: hasBarcode ? barcode : undefined,
       createdAt: new Date().toISOString(),
     })
 
@@ -75,6 +79,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         name: name.trim(),
         caloriesPerUnit: cal,
         unit: unit === 'custom' ? (customUnit.trim() || 'portion') : unit,
+        barcode: hasBarcode ? barcode : undefined,
         lastUsed: new Date().toISOString(),
       })
     }

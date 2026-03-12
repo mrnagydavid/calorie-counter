@@ -15,7 +15,9 @@
   "type": "module",
   "packageManager": "pnpm@10.15.1",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "dependencies": {
     "dexie": "^4.3.0",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.3",
+    "@vitejs/plugin-basic-ssl": "^2.1.4",
     "oxlint": "^1.52.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",

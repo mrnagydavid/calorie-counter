@@ -7,10 +7,12 @@ import { DateNav } from '../components/DateNav'
 import { CalorieBudgetBar } from '../components/CalorieBudgetBar'
 import { EntryList } from '../components/EntryList'
 import { Fab } from '../components/Fab'
+import { BarcodeScanner } from '../components/BarcodeScanner'
 import styles from './Dashboard.module.css'
 
 export function Dashboard() {
   const [date, setDate] = useState(todayString)
+  const [scanning, setScanning] = useState(false)
 
   useEffect(() => {
     getOrCreateSettings()
@@ -33,7 +35,10 @@ export function Dashboard() {
       <DateNav date={date} onDateChange={setDate} />
       <CalorieBudgetBar consumed={consumed} target={target} />
       <EntryList intakes={intakes} burns={burns} />
-      <Fab date={date} />
+      <Fab date={date} onScanBarcode={() => setScanning(true)} />
+      {scanning && (
+        <BarcodeScanner date={date} onClose={() => setScanning(false)} />
+      )}
     </div>
   )
 }

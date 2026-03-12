@@ -1,10 +1,16 @@
-import { defineConfig } from 'vite'
 import preact from '@preact/preset-vite'
+// import basicSsl from '@vitejs/plugin-basic-ssl'
+import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    host: true,
+    port: 5173,
+  },
   plugins: [
     preact(),
+    // basicSsl(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
