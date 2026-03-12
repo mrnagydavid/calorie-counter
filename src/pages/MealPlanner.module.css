@@ -1,0 +1,313 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 0;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.backButton:hover {
+  background: var(--color-bg-secondary);
+}
+
+.backButton svg {
+  width: 22px;
+  height: 22px;
+}
+
+.headerTitle {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Sections */
+.section {
+  padding: 0 16px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Budget */
+.budgetRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.budgetLabel {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.budgetInputRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.budgetInput {
+  width: 72px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.budgetInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.budgetUnit {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.barTrack {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+.budgetStatus {
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Item list */
+.itemList {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.itemName {
+  flex: 1;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemCal {
+  font-size: 15px;
+  font-weight: 600;
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
+.itemActions {
+  padding: 6px 0 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.deleteButton {
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--color-bg-secondary);
+  color: var(--color-red);
+  border: 1px solid var(--color-border);
+}
+
+.deleteButton:hover {
+  background: var(--color-red);
+  color: white;
+}
+
+.draftTotal {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+/* Recents */
+.recentList {
+  display: flex;
+  flex-direction: column;
+}
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  width: 100%;
+}
+
+.recentItem:last-child {
+  border-bottom: none;
+}
+
+.recentName {
+  flex: 1;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recentCal {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-left: 8px;
+}
+
+/* Inline add */
+.addRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.addCalInput {
+  width: 72px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.addCalInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.addNameInput {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.addNameInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.addButton:disabled {
+  opacity: 0.4;
+}
+
+.addButton:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.scanButton {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+
+.scanButton:hover {
+  background: var(--color-border);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.dismissButton,
+.logButton {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dismissButton {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.dismissButton:hover {
+  background: var(--color-border);
+}
+
+.logButton {
+  background: var(--color-primary);
+  color: white;
+}
+
+.logButton:disabled {
+  opacity: 0.4;
+}
+
+.logButton:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}

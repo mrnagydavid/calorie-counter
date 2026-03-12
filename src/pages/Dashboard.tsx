@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
+import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
@@ -32,11 +33,15 @@ export function Dashboard() {
   const burned = burns.reduce((sum, e) => sum + e.calories, 0)
   const target = baseTarget + burned
   const consumed = intakes.reduce((sum, e) => sum + e.calories, 0)
+  const remaining = target - consumed
 
   return (
     <div class={styles.page}>
       <DateNav date={date} onDateChange={setDate} />
       <CalorieBudgetBar consumed={consumed} target={target} />
+      <button class={styles.plannerButton} onClick={() => route(`/planner/${date}`)}>
+        Plan a meal{remaining > 0 ? ` — ${remaining} remaining` : ''}
+      </button>
       <EntryList intakes={intakes} burns={burns} />
       <Fab date={date} onScanBarcode={() => setScanning(true)} />
       {scanning && (

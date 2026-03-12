@@ -5,6 +5,7 @@ import { History } from './pages/History'
 import { SettingsPage } from './pages/SettingsPage'
 import { AddIntakePage } from './pages/AddIntakePage'
 import { AddBurnPage } from './pages/AddBurnPage'
+import { MealPlanner } from './pages/MealPlanner'
 import styles from './app.module.css'
 
 export function App() {
@@ -17,6 +18,7 @@ export function App() {
           <Route path="/settings" component={SettingsPage} />
           <Route path="/add-intake/:date" component={AddIntakePage} />
           <Route path="/add-burn/:date" component={AddBurnPage} />
+          <Route path="/planner/:date" component={MealPlanner} />
         </Router>
       </main>
       <BottomNav />
