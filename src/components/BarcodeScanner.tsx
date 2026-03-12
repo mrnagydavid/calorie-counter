@@ -154,6 +154,7 @@ export function BarcodeScanner({ date, onClose }: BarcodeScannerProps) {
       calories: total,
       quantity,
       unitCalories,
+      unit: selectedVariant.unit,
       source: 'barcode',
       barcode,
       createdAt: new Date().toISOString(),

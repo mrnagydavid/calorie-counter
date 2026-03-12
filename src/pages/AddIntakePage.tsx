@@ -61,6 +61,8 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
     if (!canSubmit) return
     const entryName = name.trim() || `${total} kcal`
 
+    const resolvedUnit = unit === 'custom' ? (customUnit.trim() || 'portion') : unit
+
     await db.intakeEntries.add({
       id: crypto.randomUUID(),
       date,
@@ -68,6 +70,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       calories: total,
       quantity,
       unitCalories: cal,
+      unit: resolvedUnit,
       source: hasBarcode ? 'barcode' : 'manual',
       barcode: hasBarcode ? barcode : undefined,
       createdAt: new Date().toISOString(),

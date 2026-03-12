@@ -24,6 +24,7 @@ export interface IntakeEntry {
   calories: number
   quantity: number
   unitCalories: number
+  unit: string // '100g', '100ml', 'serving', 'piece', etc.
   source: 'barcode' | 'manual'
   barcode?: string
   createdAt: string

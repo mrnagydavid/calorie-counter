@@ -8,6 +8,7 @@
   align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
 }
 
 .entry:last-child {
@@ -57,4 +58,162 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding-bottom: 8px;
+}
+
+/* Expand actions */
+.actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.deleteButton,
+.editButton {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.deleteButton {
+  background: var(--color-bg-secondary);
+  color: var(--color-red);
+  border: 1px solid var(--color-border);
+}
+
+.editButton {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.deleteButton:hover {
+  background: var(--color-red);
+  color: white;
+}
+
+.editButton:hover {
+  background: var(--color-border);
+}
+
+/* Edit form */
+.editForm {
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editLabel {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  min-width: 60px;
+}
+
+.editInput {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.editInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.editUnit {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepperBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.stepperBtn:hover {
+  background: var(--color-border);
+}
+
+.stepperInput {
+  width: 56px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.stepperInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.editTotal {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+}
+
+.cancelButton,
+.saveButton {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cancelButton {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.saveButton {
+  background: var(--color-primary);
+  color: white;
+}
+
+.cancelButton:hover {
+  background: var(--color-border);
+}
+
+.saveButton:hover {
+  background: var(--color-primary-dark);
 }
