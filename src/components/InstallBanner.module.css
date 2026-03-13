@@ -1,0 +1,44 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.installButton {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.installButton:hover {
+  background: var(--color-primary-dark);
+}
+
+.dismissButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.dismissButton svg {
+  width: 16px;
+  height: 16px;
+}

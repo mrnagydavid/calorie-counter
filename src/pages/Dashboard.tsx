@@ -9,6 +9,7 @@ import { CalorieBudgetBar } from '../components/CalorieBudgetBar'
 import { EntryList } from '../components/EntryList'
 import { Fab } from '../components/Fab'
 import { BarcodeScanner } from '../components/BarcodeScanner'
+import { InstallBanner } from '../components/InstallBanner'
 import styles from './Dashboard.module.css'
 
 export function Dashboard() {
@@ -37,6 +38,7 @@ export function Dashboard() {
 
   return (
     <div class={styles.page}>
+      <InstallBanner />
       <DateNav date={date} onDateChange={setDate} />
       <CalorieBudgetBar consumed={consumed} target={target} />
       <button class={styles.plannerButton} onClick={() => route(`/planner/${date}`)}>
