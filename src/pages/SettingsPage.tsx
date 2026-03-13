@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
+import { getInstallPrompt, clearInstallPrompt } from '../components/InstallBanner'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type DayOfWeek } from '../db/index'
 import {
@@ -29,6 +30,7 @@ export function SettingsPage() {
         overrides={settings.dayOverrides}
       />
       <DataManagementSection />
+      <InstallSection />
     </div>
   )
 }
@@ -309,6 +311,37 @@ function DataManagementSection() {
             </div>
           </div>
         </div>
+      )}
+    </section>
+  )
+}
+
+function InstallSection() {
+  const [installed, setInstalled] = useState(false)
+
+  const handleInstall = useCallback(async () => {
+    const prompt = getInstallPrompt()
+    if (!prompt) return
+    await prompt.prompt()
+    const { outcome } = await prompt.userChoice
+    if (outcome === 'accepted') {
+      clearInstallPrompt()
+      setInstalled(true)
+    }
+  }, [])
+
+  const prompt = getInstallPrompt()
+  if (!prompt && !installed) return null
+
+  return (
+    <section class={styles.section}>
+      <h2 class={styles.sectionTitle}>App</h2>
+      {installed ? (
+        <p class={styles.installedText}>App installed!</p>
+      ) : (
+        <button class={styles.dataButton} onClick={handleInstall}>
+          Install App
+        </button>
       )}
     </section>
   )

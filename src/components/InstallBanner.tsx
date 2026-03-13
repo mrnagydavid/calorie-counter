@@ -6,14 +6,27 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+// Store the prompt globally so Settings can also trigger it
+let _deferredPrompt: BeforeInstallPromptEvent | null = null
+
+export function getInstallPrompt(): BeforeInstallPromptEvent | null {
+  return _deferredPrompt
+}
+
+export function clearInstallPrompt() {
+  _deferredPrompt = null
+}
+
 export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [dismissed, setDismissed] = useState(false)
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem('pwa-dismissed') === '1')
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      const prompt = e as BeforeInstallPromptEvent
+      _deferredPrompt = prompt
+      setDeferredPrompt(prompt)
     }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
@@ -25,6 +38,7 @@ export function InstallBanner() {
     await deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
     if (outcome === 'accepted') {
+      _deferredPrompt = null
       setDeferredPrompt(null)
     }
   }
@@ -33,7 +47,7 @@ export function InstallBanner() {
     <div class={styles.banner}>
       <span class={styles.text}>Install app for quick access</span>
       <button class={styles.installButton} onClick={handleInstall}>Install</button>
-      <button class={styles.dismissButton} onClick={() => setDismissed(true)}>
+      <button class={styles.dismissButton} onClick={() => { localStorage.setItem('pwa-dismissed', '1'); setDismissed(true) }}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6L6 18M6 6l12 12" />
         </svg>

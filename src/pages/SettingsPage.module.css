@@ -216,3 +216,9 @@
   color: white;
   background: var(--color-primary);
 }
+
+.installedText {
+  font-size: 14px;
+  color: var(--color-green);
+  font-weight: 500;
+}
