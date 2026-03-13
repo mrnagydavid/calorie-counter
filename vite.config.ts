@@ -3,8 +3,7 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  // @ts-expect-error process.env exists at runtime
-  base: process.env.GITHUB_ACTIONS ? '/calorie-counter/' : '/',
+  base: '/',
   server: {
     host: true,
     port: 5173,
