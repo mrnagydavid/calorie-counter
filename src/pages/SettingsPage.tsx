@@ -31,6 +31,7 @@ export function SettingsPage() {
       />
       <DataManagementSection />
       <InstallSection />
+      <p class={styles.version}>v{__COMMIT_HASH__}</p>
     </div>
   )
 }

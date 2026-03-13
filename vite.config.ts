@@ -1,9 +1,15 @@
+import { execSync } from 'child_process'
 import preact from '@preact/preset-vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const commitHash = execSync('git rev-parse --short HEAD').toString().trim()
+
 export default defineConfig({
   base: '/',
+  define: {
+    __COMMIT_HASH__: JSON.stringify(commitHash),
+  },
   server: {
     host: true,
     port: 5173,
