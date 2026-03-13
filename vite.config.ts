@@ -1,16 +1,16 @@
 import preact from '@preact/preset-vite'
-// import basicSsl from '@vitejs/plugin-basic-ssl'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // @ts-expect-error process.env exists at runtime
+  base: process.env.GITHUB_ACTIONS ? '/calorie-counter/' : '/',
   server: {
     host: true,
     port: 5173,
   },
   plugins: [
     preact(),
-    // basicSsl(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
