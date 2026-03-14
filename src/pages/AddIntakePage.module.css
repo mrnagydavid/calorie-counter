@@ -89,6 +89,76 @@
   white-space: nowrap;
 }
 
+/* Search info (shown when food selected from search) */
+.searchInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: #ecfdf5;
+  border: 1px solid var(--color-primary);
+}
+
+.searchInfoText {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-primary-dark);
+}
+
+.searchInfoClear {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+/* Search button */
+.searchButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.searchButton:active {
+  background: var(--color-border);
+}
+
+/* Portion chips */
+.portionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.portionChip {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.portionChip:active {
+  background: var(--color-border);
+}
+
+.portionChipG {
+  color: var(--color-text-secondary);
+}
+
 /* Form fields */
 .fieldLabel {
   font-size: 14px;

@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
+import { FoodSearch, type FoodSearchResult } from '../components/FoodSearch'
 import styles from './AddIntakePage.module.css'
 
 interface AddIntakePageProps {
@@ -46,6 +47,9 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
   const [quantity, setQuantity] = useState('100')
   const [name, setName] = useState('')
   const [saveAsCustom, setSaveAsCustom] = useState(hasBarcode)
+  const [searching, setSearching] = useState(false)
+  const [portions, setPortions] = useState<{ desc: string; g: number }[] | null>(null)
+  const [fromSearch, setFromSearch] = useState(false)
 
   const allIntakes = useLiveQuery(() =>
     db.intakeEntries.orderBy('createdAt').reverse().toArray(),
@@ -89,10 +93,29 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
     }
   }, [])
 
+  const handleSearchResult = useCallback((result: FoodSearchResult) => {
+    const isLiquid = /beverages/i.test(result.cat) ||
+      /\b(juice|milk|drink|smoothie|water|broth|soup|soda|tea|coffee|wine|beer)\b/i.test(result.name)
+    const searchUnit = isLiquid ? '100ml' : '100g'
+    setName(result.name)
+    setUnitCalories(String(result.kcal))
+    setUnit(searchUnit)
+    setQuantity('100')
+    setPortions(result.portions || null)
+    setFromSearch(true)
+    setSearching(false)
+  }, [])
+
+  const handlePortionTap = useCallback((portion: { desc: string; g: number }) => {
+    setQuantity(String(portion.g))
+  }, [])
+
   const handleRecentTap = useCallback((item: RecentFood) => {
     setName(item.name)
     setUnitCalories(String(item.unitCalories))
     setUnit(item.unit)
+    setPortions(null)
+    setFromSearch(false)
     if (item.unit === '100g' || item.unit === '100ml') {
       setQuantity(String(Math.round(item.quantity * 100)))
     } else if (item.unit === 'total') {
@@ -162,64 +185,109 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         </div>
       )}
 
-      {/* 1. Unit selector */}
-      <div class={styles.section}>
-        <div class={styles.fieldLabel}>Unit</div>
-        <div class={styles.unitOptions}>
-          {UNITS.map((opt) => (
-            <label key={opt} class={styles.unitOption}>
+      {/* Search button (hidden when already filled from search) */}
+      {!fromSearch && (
+        <button class={styles.searchButton} onClick={() => setSearching(true)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          Search food database
+        </button>
+      )}
+
+      {/* 1. Unit selector (hidden when filled from search) */}
+      {fromSearch ? (
+        <div class={styles.searchInfo}>
+          <span class={styles.searchInfoText}>{name} · {unitCalories} kcal/100g</span>
+          <button class={styles.searchInfoClear} onClick={() => {
+            setPortions(null)
+            setFromSearch(false)
+            setName('')
+            setUnitCalories('')
+            setQuantity('100')
+            setUnit('100g')
+          }}>Clear</button>
+        </div>
+      ) : (
+        <div class={styles.section}>
+          <div class={styles.fieldLabel}>Unit</div>
+          <div class={styles.unitOptions}>
+            {UNITS.map((opt) => (
+              <label key={opt} class={styles.unitOption}>
+                <input
+                  type="radio"
+                  name="unit"
+                  value={opt}
+                  checked={unit === opt}
+                  onChange={() => handleUnitChange(opt)}
+                />
+                {opt}
+              </label>
+            ))}
+            <label class={styles.unitOption}>
               <input
                 type="radio"
                 name="unit"
-                value={opt}
-                checked={unit === opt}
-                onChange={() => handleUnitChange(opt)}
+                value="custom"
+                checked={unit === 'custom'}
+                onChange={() => handleUnitChange('custom')}
               />
-              {opt}
+              <input
+                type="text"
+                class={styles.unitCustomInput}
+                value={customUnit}
+                onInput={(e) => {
+                  setCustomUnit((e.target as HTMLInputElement).value)
+                  setUnit('custom')
+                }}
+                onFocus={() => setUnit('custom')}
+                placeholder="custom"
+              />
             </label>
-          ))}
-          <label class={styles.unitOption}>
-            <input
-              type="radio"
-              name="unit"
-              value="custom"
-              checked={unit === 'custom'}
-              onChange={() => handleUnitChange('custom')}
-            />
-            <input
-              type="text"
-              class={styles.unitCustomInput}
-              value={customUnit}
-              onInput={(e) => {
-                setCustomUnit((e.target as HTMLInputElement).value)
-                setUnit('custom')
-              }}
-              onFocus={() => setUnit('custom')}
-              placeholder="custom"
-            />
-          </label>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* 2. Calories per unit */}
-      <div class={styles.section}>
-        <div class={styles.fieldLabel}>
-          {isTotal ? 'Total calories' : `Calories per ${resolvedUnit}`}
+      {/* 2. Calories per unit (hidden when filled from search) */}
+      {!fromSearch && (
+        <div class={styles.section}>
+          <div class={styles.fieldLabel}>
+            {isTotal ? 'Total calories' : `Calories per ${resolvedUnit}`}
+          </div>
+          <div class={styles.inputRow}>
+            <input
+              type="number"
+              inputMode="numeric"
+              class={styles.calorieInput}
+              value={unitCalories}
+              onInput={(e) => setUnitCalories((e.target as HTMLInputElement).value)}
+              onFocus={(e) => (e.target as HTMLInputElement).select()}
+              placeholder="0"
+              min="0"
+            />
+            <span class={styles.unit}>kcal</span>
+          </div>
         </div>
-        <div class={styles.inputRow}>
-          <input
-            type="number"
-            inputMode="numeric"
-            class={styles.calorieInput}
-            value={unitCalories}
-            onInput={(e) => setUnitCalories((e.target as HTMLInputElement).value)}
-            onFocus={(e) => (e.target as HTMLInputElement).select()}
-            placeholder="0"
-            min="0"
-          />
-          <span class={styles.unit}>kcal</span>
+      )}
+
+      {/* Portion quick-picks (shown when a USDA food with portions is selected and unit is 100g/100ml) */}
+      {showQuantity && portions && portions.length > 0 && (unit === '100g' || unit === '100ml') && (
+        <div class={styles.section}>
+          <div class={styles.fieldLabel}>Quick portion</div>
+          <div class={styles.portionChips}>
+            {portions.map((p, i) => (
+              <button
+                key={i}
+                class={styles.portionChip}
+                onClick={() => handlePortionTap(p)}
+              >
+                {p.desc} <span class={styles.portionChipG}>{p.g}g</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Quantity (hidden for "total") */}
       {showQuantity && (
@@ -269,6 +337,10 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       <button class={styles.submitButton} disabled={!canSubmit} onClick={handleSubmit}>
         Add Entry
       </button>
+
+      {searching && (
+        <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} />
+      )}
     </div>
   )
 }
