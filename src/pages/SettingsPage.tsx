@@ -31,6 +31,7 @@ export function SettingsPage() {
       />
       <DataManagementSection />
       <InstallSection />
+      <LegalSection />
       <p class={styles.version}>v{__COMMIT_HASH__}</p>
     </div>
   )
@@ -313,6 +314,69 @@ function DataManagementSection() {
           </div>
         </div>
       )}
+    </section>
+  )
+}
+
+function LegalSection() {
+  const [expanded, setExpanded] = useState<'terms' | 'privacy' | null>(null)
+
+  return (
+    <section class={styles.section}>
+      <h2 class={styles.sectionTitle}>Legal</h2>
+      <div class={styles.dataButtons}>
+        <button
+          class={styles.dataButton}
+          onClick={() => setExpanded(expanded === 'terms' ? null : 'terms')}
+        >
+          Terms & Conditions
+        </button>
+        {expanded === 'terms' && (
+          <div class={styles.legalText}>
+            <p>
+              This is a free calorie counting app. It counts calories. That's it.
+            </p>
+            <p>
+              The calorie data comes from the USDA FoodData Central database and the
+              Open Food Facts project. We do our best, but nutritional values are
+              approximate. Do not use this app to make medical decisions. We are not
+              dietitians, doctors, or lawyers — which is ironic given this section.
+            </p>
+            <p>
+              The app is provided "as is" with no warranties. If your banana has
+              more calories than we said, that's between you and the banana.
+            </p>
+          </div>
+        )}
+        <button
+          class={styles.dataButton}
+          onClick={() => setExpanded(expanded === 'privacy' ? null : 'privacy')}
+        >
+          Privacy Policy
+        </button>
+        {expanded === 'privacy' && (
+          <div class={styles.legalText}>
+            <p>
+              The short version: we don't collect your data. At all. Truly.
+            </p>
+            <p>
+              All your data (meals, settings, everything) is stored locally on your
+              device in your browser's IndexedDB. It never leaves your phone. There
+              is no account, no server, no analytics, no tracking pixels, no cookies
+              (the irony — a food app with no cookies).
+            </p>
+            <p>
+              When you scan a barcode, a request is made to Open Food Facts
+              (openfoodfacts.org) to look up the product. They have their own privacy
+              policy. When you search the food database, it's a local file — no network
+              request at all.
+            </p>
+            <p>
+              We genuinely wish more apps had this little to say in their privacy policy.
+            </p>
+          </div>
+        )}
+      </div>
     </section>
   )
 }
