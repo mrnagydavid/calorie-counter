@@ -17,6 +17,13 @@ export function Dashboard() {
     const params = new URLSearchParams(window.location.search)
     return params.get('date') || todayString()
   })
+
+  // Listen for custom event dispatched when "Today" tab is tapped while already on "/"
+  useEffect(() => {
+    const onReset = () => setDate(todayString())
+    window.addEventListener('dashboard:reset-today', onReset)
+    return () => window.removeEventListener('dashboard:reset-today', onReset)
+  }, [])
   const [scanning, setScanning] = useState(false)
 
   useEffect(() => {

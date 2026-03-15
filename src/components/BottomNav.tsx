@@ -12,7 +12,11 @@ export function BottomNav() {
 
   return (
     <nav class={styles.nav}>
-      <a href="/" class={linkClass('/')}>
+      <a href="/" class={linkClass('/')} onClick={() => {
+        if (currentPath === '/') {
+          window.dispatchEvent(new CustomEvent('dashboard:reset-today'))
+        }
+      }}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10" />
           <path d="M12 6v6l4 2" />
