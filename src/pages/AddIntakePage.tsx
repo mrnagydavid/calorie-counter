@@ -50,6 +50,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
   const [searching, setSearching] = useState(false)
   const [portions, setPortions] = useState<{ desc: string; g: number }[] | null>(null)
   const [fromSearch, setFromSearch] = useState(false)
+  const [isLiquid, setIsLiquid] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
   const allIntakes = useLiveQuery(() =>
@@ -95,15 +96,15 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
   }, [])
 
   const handleSearchResult = useCallback((result: FoodSearchResult, query: string) => {
-    const isLiquid = /beverages/i.test(result.cat) ||
+    const liquid = /beverages/i.test(result.cat) ||
       /\b(juice|milk|drink|smoothie|water|broth|soup|soda|tea|coffee|wine|beer)\b/i.test(result.name)
-    const searchUnit = isLiquid ? '100ml' : '100g'
     setName(result.name)
     setUnitCalories(String(result.kcal))
-    setUnit(searchUnit)
+    setUnit('100g')
     setQuantity('100')
     setPortions(result.portions || null)
     setFromSearch(true)
+    setIsLiquid(liquid)
     setSearchQuery(query)
     setSearching(false)
   }, [])
@@ -200,17 +201,25 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
 
       {/* 1. Unit selector (hidden when filled from search) */}
       {fromSearch ? (
-        <div class={styles.searchInfo}>
-          <span class={styles.searchInfoText} onClick={() => setSearching(true)}>{name} · {unitCalories} kcal/100g</span>
-          <button class={styles.searchInfoClear} onClick={() => {
-            setPortions(null)
-            setFromSearch(false)
-            setSearchQuery('')
-            setName('')
-            setUnitCalories('')
-            setQuantity('100')
-            setUnit('100g')
-          }}>Clear</button>
+        <div>
+          <div class={styles.searchInfo}>
+            <span class={styles.searchInfoText} onClick={() => setSearching(true)}>{name} · {unitCalories} kcal/100g</span>
+            <button class={styles.searchInfoClear} onClick={() => {
+              setPortions(null)
+              setFromSearch(false)
+              setIsLiquid(false)
+              setSearchQuery('')
+              setName('')
+              setUnitCalories('')
+              setQuantity('100')
+              setUnit('100g')
+            }}>Clear</button>
+          </div>
+          {isLiquid && (
+            <div class={styles.liquidNote}>
+              ⚠️ Nutritional data is per 100g by weight. For liquids, use a kitchen scale for best accuracy — volume and weight may differ.
+            </div>
+          )}
         </div>
       ) : (
         <div class={styles.section}>

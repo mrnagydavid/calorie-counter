@@ -120,6 +120,16 @@
   border: 1px solid var(--color-border);
 }
 
+.liquidNote {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  padding: 6px 10px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
 /* Search button */
 .searchButton {
   display: flex;
