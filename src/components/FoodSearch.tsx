@@ -17,8 +17,9 @@ export interface FoodSearchResult {
 }
 
 interface FoodSearchProps {
-  onSelect: (result: FoodSearchResult) => void
+  onSelect: (result: FoodSearchResult, query: string) => void
   onClose: () => void
+  initialQuery?: string
 }
 
 let _foodsCache: FoodItem[] | null = null
@@ -78,8 +79,8 @@ function scoreMatch(name: string, query: string): number {
   return tier * 10000 + isBasic * 1000 + Math.min(name.length, 200)
 }
 
-export function FoodSearch({ onSelect, onClose }: FoodSearchProps) {
-  const [query, setQuery] = useState('')
+export function FoodSearch({ onSelect, onClose, initialQuery = '' }: FoodSearchProps) {
+  const [query, setQuery] = useState(initialQuery)
   const [foods, setFoods] = useState<FoodItem[] | null>(null)
   const [results, setResults] = useState<FoodItem[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
@@ -138,7 +139,7 @@ export function FoodSearch({ onSelect, onClose }: FoodSearchProps) {
             <button
               key={food.id}
               class={styles.resultItem}
-              onClick={() => onSelect({ name: food.name, cat: food.cat, kcal: food.kcal, portions: food.portions })}
+              onClick={() => onSelect({ name: food.name, cat: food.cat, kcal: food.kcal, portions: food.portions }, query)}
             >
               <div class={styles.resultName}>{food.name}</div>
               <div class={styles.resultMeta}>

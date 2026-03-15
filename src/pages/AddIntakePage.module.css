@@ -101,9 +101,14 @@
 }
 
 .searchInfoText {
+  flex: 1;
   font-size: 14px;
   font-weight: 500;
   color: var(--color-primary-dark);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
 }
 
 .searchInfoClear {

@@ -50,6 +50,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
   const [searching, setSearching] = useState(false)
   const [portions, setPortions] = useState<{ desc: string; g: number }[] | null>(null)
   const [fromSearch, setFromSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const allIntakes = useLiveQuery(() =>
     db.intakeEntries.orderBy('createdAt').reverse().toArray(),
@@ -93,7 +94,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
     }
   }, [])
 
-  const handleSearchResult = useCallback((result: FoodSearchResult) => {
+  const handleSearchResult = useCallback((result: FoodSearchResult, query: string) => {
     const isLiquid = /beverages/i.test(result.cat) ||
       /\b(juice|milk|drink|smoothie|water|broth|soup|soda|tea|coffee|wine|beer)\b/i.test(result.name)
     const searchUnit = isLiquid ? '100ml' : '100g'
@@ -103,6 +104,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
     setQuantity('100')
     setPortions(result.portions || null)
     setFromSearch(true)
+    setSearchQuery(query)
     setSearching(false)
   }, [])
 
@@ -153,13 +155,13 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       })
     }
 
-    route('/')
+    route('/', true)
   }, [canSubmit, date, name, total, qty, cal, resolvedUnit, saveAsCustom, hasBarcode, barcode])
 
   return (
     <div class={styles.page}>
       <div class={styles.header}>
-        <button class={styles.backButton} onClick={() => route('/')}>
+        <button class={styles.backButton} onClick={() => route('/', true)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
@@ -199,10 +201,11 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       {/* 1. Unit selector (hidden when filled from search) */}
       {fromSearch ? (
         <div class={styles.searchInfo}>
-          <span class={styles.searchInfoText}>{name} · {unitCalories} kcal/100g</span>
+          <span class={styles.searchInfoText} onClick={() => setSearching(true)}>{name} · {unitCalories} kcal/100g</span>
           <button class={styles.searchInfoClear} onClick={() => {
             setPortions(null)
             setFromSearch(false)
+            setSearchQuery('')
             setName('')
             setUnitCalories('')
             setQuantity('100')
@@ -339,7 +342,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       </button>
 
       {searching && (
-        <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} />
+        <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} initialQuery={searchQuery} />
       )}
     </div>
   )
