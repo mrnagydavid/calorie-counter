@@ -23,6 +23,7 @@ export default defineConfig({
         short_name: 'Calories',
         start_url: '/',
         display: 'standalone',
+        orientation: 'portrait',
         background_color: '#ffffff',
         theme_color: '#10b981',
         icons: [
