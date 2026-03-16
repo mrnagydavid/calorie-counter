@@ -1,10 +1,23 @@
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import { Html5Qrcode } from 'html5-qrcode'
-import { db } from '../db/index'
-import { lookupBarcode, type OFFProduct, type CalorieVariant } from '../services/openfoodfacts'
 import { route } from 'preact-router'
-import { NumericInput } from './NumericInput'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { db } from '../db/index'
+import { lookupBarcode, type CalorieVariant, type OFFProduct } from '../services/openfoodfacts'
 import styles from './BarcodeScanner.module.css'
+import { NumericInput } from './NumericInput'
+
+const FOOD_EMOJIS = ['🍎', '🥚', '🍕', '🥑', '🍌', '🧀', '🥕', '🍩']
+
+function FoodSpinner() {
+  const [idx, setIdx] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => setIdx((i) => (i + 1) % FOOD_EMOJIS.length), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  return <span class={styles.foodSpinner}>{FOOD_EMOJIS[idx]}</span>
+}
 
 export interface ScannedEntry {
   name: string
@@ -216,13 +229,22 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
       <div class={styles.body}>
         {state.step === 'scanning' && (
           <>
-            <div class={styles.cameraWrapper}>
-              <div ref={containerRef} />
-              {state.loading && (
-                <div class={styles.loadingOverlay}>Looking up product...</div>
-              )}
-            </div>
-            {!state.loading && <div class={styles.hint}>Point camera at a barcode</div>}
+            {state.loading ? (
+              <div class={styles.lookupScreen}>
+                <FoodSpinner />
+                <span class={styles.lookupText}>Looking up product...</span>
+                <span class={styles.lookupNote}>
+                  Using Open Food Facts, a free community database. Lookups may take a moment.
+                </span>
+              </div>
+            ) : (
+              <>
+                <div class={styles.cameraWrapper}>
+                  <div ref={containerRef} />
+                </div>
+                <div class={styles.hint}>Point camera at a barcode</div>
+              </>
+            )}
           </>
         )}
 

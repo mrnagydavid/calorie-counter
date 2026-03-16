@@ -66,17 +66,38 @@
   color: var(--color-text-secondary);
 }
 
-.loadingOverlay {
-  position: absolute;
-  inset: 0;
+.lookupScreen {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
+  gap: 12px;
+  padding: 48px 24px;
+}
+
+.foodSpinner {
+  display: inline-block;
+  font-size: 48px;
+  animation: food-flip 1s ease-in-out infinite;
+}
+
+@keyframes food-flip {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+.lookupText {
   font-size: 16px;
   font-weight: 500;
-  border-radius: var(--radius-md);
+  color: var(--color-text);
+}
+
+.lookupNote {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.4;
 }
 
 /* Product result */
