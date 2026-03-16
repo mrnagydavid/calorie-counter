@@ -10,13 +10,17 @@ const FOOD_EMOJIS = ['🍎', '🥚', '🍕', '🥑', '🍌', '🧀', '🥕', '�
 
 function FoodSpinner() {
   const [idx, setIdx] = useState(0)
+  const ref = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
-    const id = setInterval(() => setIdx((i) => (i + 1) % FOOD_EMOJIS.length), 1000)
-    return () => clearInterval(id)
+    const el = ref.current
+    if (!el) return
+    const onIteration = () => setIdx((i) => (i + 1) % FOOD_EMOJIS.length)
+    el.addEventListener('animationiteration', onIteration)
+    return () => el.removeEventListener('animationiteration', onIteration)
   }, [])
 
-  return <span class={styles.foodSpinner}>{FOOD_EMOJIS[idx]}</span>
+  return <span ref={ref} class={styles.foodSpinner}>{FOOD_EMOJIS[idx]}</span>
 }
 
 export interface ScannedEntry {
