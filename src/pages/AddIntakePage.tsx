@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { FoodSearch, type FoodSearchResult } from '../components/FoodSearch'
+import { NumericInput } from '../components/NumericInput'
 import styles from './AddIntakePage.module.css'
 
 interface AddIntakePageProps {
@@ -268,13 +269,11 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
             {isTotal ? 'Total calories' : `Calories per ${resolvedUnit}`}
           </div>
           <div class={styles.inputRow}>
-            <input
-              type="number"
+            <NumericInput
               inputMode="numeric"
               class={styles.calorieInput}
               value={unitCalories}
               onInput={(e) => setUnitCalories((e.target as HTMLInputElement).value)}
-              onFocus={(e) => (e.target as HTMLInputElement).select()}
               placeholder="0"
               min="0"
             />
@@ -306,12 +305,10 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         <div class={styles.section}>
           <div class={styles.fieldLabel}>Quantity ({quantityLabel(resolvedUnit)})</div>
           <div class={styles.inputRow}>
-            <input
-              type="number"
+            <NumericInput
               class={styles.calorieInput}
               value={quantity}
               onInput={(e) => setQuantity((e.target as HTMLInputElement).value)}
-              onFocus={(e) => (e.target as HTMLInputElement).select()}
               min="0"
             />
             <span class={styles.unit}>{quantityLabel(resolvedUnit)}</span>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
+import { NumericInput } from '../components/NumericInput'
 import { getInstallPrompt, clearInstallPrompt } from '../components/InstallBanner'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type DayOfWeek } from '../db/index'
@@ -57,8 +58,7 @@ function CalorieTargetSection({ baseline }: { baseline: number }) {
     <section class={styles.section}>
       <h2 class={styles.sectionTitle}>Daily Calorie Target</h2>
       <div class={styles.inputRow}>
-        <input
-          type="number"
+        <NumericInput
           inputMode="numeric"
           class={styles.calorieInput}
           value={value}
@@ -147,8 +147,7 @@ function DayOverridesSection({
       {selectedDay && (
         <div class={styles.overrideEditor}>
           <span class={styles.overrideLabel}>{selectedDayLabel}</span>
-          <input
-            type="number"
+          <NumericInput
             inputMode="numeric"
             class={styles.calorieInput}
             value={editValue}

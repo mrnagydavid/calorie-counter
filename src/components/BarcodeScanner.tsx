@@ -3,6 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { db } from '../db/index'
 import { lookupBarcode, type OFFProduct, type CalorieVariant } from '../services/openfoodfacts'
 import { route } from 'preact-router'
+import { NumericInput } from './NumericInput'
 import styles from './BarcodeScanner.module.css'
 
 export interface ScannedEntry {
@@ -292,13 +293,11 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
               <div>
                 <div class={styles.fieldLabel}>Amount</div>
                 <div class={styles.inputRow}>
-                  <input
-                    type="number"
+                  <NumericInput
                     inputMode="numeric"
                     class={styles.amountInput}
                     value={amount}
                     onInput={(e) => setAmount((e.target as HTMLInputElement).value)}
-                    onFocus={(e) => (e.target as HTMLInputElement).select()}
                     min="0"
                   />
                   <span class={styles.unitLabel}>

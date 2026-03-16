@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
 import { db, type IntakeEntry, type BurnEntry } from '../db/index'
+import { NumericInput } from './NumericInput'
 import styles from './EntryList.module.css'
 
 interface EntryListProps {
@@ -147,23 +148,19 @@ export function EntryList({ intakes, burns }: EntryListProps) {
                 <div class={styles.editForm}>
                   <div class={styles.editRow}>
                     <label class={styles.editLabel}>Per {entry.data.unit}</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       class={styles.editInput}
                       value={editUnitCal}
                       onInput={(e) => setEditUnitCal((e.target as HTMLInputElement).value)}
-                      onFocus={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <span class={styles.editUnit}>kcal</span>
                   </div>
                   <div class={styles.editRow}>
                     <label class={styles.editLabel}>Amount</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       class={styles.editInput}
                       value={editAmount}
                       onInput={(e) => setEditAmount((e.target as HTMLInputElement).value)}
-                      onFocus={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <span class={styles.editUnit}>{unitSuffix(entry.data.unit)}</span>
                   </div>
@@ -181,12 +178,10 @@ export function EntryList({ intakes, burns }: EntryListProps) {
                 <div class={styles.editForm}>
                   <div class={styles.editRow}>
                     <label class={styles.editLabel}>Per unit</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       class={styles.editInput}
                       value={editUnitCal}
                       onInput={(e) => setEditUnitCal((e.target as HTMLInputElement).value)}
-                      onFocus={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <span class={styles.editUnit}>kcal</span>
                   </div>
@@ -197,12 +192,10 @@ export function EntryList({ intakes, burns }: EntryListProps) {
                         const v = Math.max(0.5, (parseFloat(editQty) || 1) - 0.5)
                         setEditQty(String(v))
                       }}>-</button>
-                      <input
-                        type="number"
+                      <NumericInput
                         class={styles.stepperInput}
                         value={editQty}
                         onInput={(e) => setEditQty((e.target as HTMLInputElement).value)}
-                        onFocus={(e) => (e.target as HTMLInputElement).select()}
                       />
                       <button class={styles.stepperBtn} onClick={() => {
                         const v = (parseFloat(editQty) || 0) + 0.5
@@ -224,12 +217,10 @@ export function EntryList({ intakes, burns }: EntryListProps) {
                 <div class={styles.editForm}>
                   <div class={styles.editRow}>
                     <label class={styles.editLabel}>Calories</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       class={styles.editInput}
                       value={editCalories}
                       onInput={(e) => setEditCalories((e.target as HTMLInputElement).value)}
-                      onFocus={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <span class={styles.editUnit}>kcal</span>
                   </div>

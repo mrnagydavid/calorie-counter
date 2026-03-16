@@ -5,6 +5,7 @@ import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
 import { todayString, getDayOfWeek } from '../db/dates'
 import { BarcodeScanner, type ScannedEntry } from '../components/BarcodeScanner'
+import { NumericInput } from '../components/NumericInput'
 import styles from './MealPlanner.module.css'
 
 interface MealPlannerProps {
@@ -157,12 +158,10 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         <div class={styles.budgetRow}>
           <span class={styles.budgetLabel}>Budget</span>
           <div class={styles.budgetInputRow}>
-            <input
-              type="number"
+            <NumericInput
               class={styles.budgetInput}
               value={budgetOverride !== null ? budgetOverride : String(remaining)}
               onInput={(e) => setBudgetOverride((e.target as HTMLInputElement).value)}
-              onFocus={(e) => (e.target as HTMLInputElement).select()}
             />
             <span class={styles.budgetUnit}>kcal</span>
           </div>
@@ -227,8 +226,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
       <div class={styles.section}>
         <div class={styles.sectionTitle}>Add item</div>
         <div class={styles.addRow}>
-          <input
-            type="number"
+          <NumericInput
             inputMode="numeric"
             class={styles.addCalInput}
             value={addCal}

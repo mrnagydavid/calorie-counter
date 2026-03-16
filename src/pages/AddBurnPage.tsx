@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
+import { NumericInput } from '../components/NumericInput'
 import styles from './AddBurnPage.module.css'
 
 interface AddBurnPageProps {
@@ -88,8 +89,7 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
       <div class={styles.section}>
         <div class={styles.fieldLabel}>Calories burned</div>
         <div class={styles.inputRow}>
-          <input
-            type="number"
+          <NumericInput
             inputMode="numeric"
             class={styles.calorieInput}
             value={calories}
