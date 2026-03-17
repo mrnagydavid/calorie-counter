@@ -31,52 +31,50 @@ async function loadFoods(): Promise<FoodItem[]> {
   return _foodsCache!
 }
 
+/**
+ * Score a single query word against a food name.
+ * Tier 0: first comma-segment matches exactly (e.g. "egg" → "Egg, whole, raw")
+ * Tier 1: first word of first segment matches (e.g. "milk" → "Milk shakes")
+ * Tier 2: first segment starts with word (e.g. "egg" → "Eggnog")
+ * Tier 3: a later word in the name starts with query word
+ * Tier 4: name contains query word as substring
+ * Returns -1 if no match.
+ */
+function scoreWord(lower: string, firstSegment: string, firstWord: string, nameWords: string[], qw: string): number {
+  const qwPlural = qw.endsWith('s') ? qw.slice(0, -1) : qw + 's'
+  if (firstSegment === qw || firstSegment === qwPlural) return 0
+  if (firstWord === qw || firstWord === qwPlural) return 1
+  if (firstSegment.startsWith(qw)) return 2
+  if (nameWords.some(w => w.startsWith(qw) || w === qwPlural)) return 3
+  if (lower.includes(qw)) return 4
+  return -1
+}
+
+/**
+ * Score a food name against a query. The query is split into words; every word
+ * must match somewhere in the name. The score is the sum of per-word tiers,
+ * so word order doesn't matter and items where ALL words match well rank highest.
+ *
+ * "raw egg" and "egg raw" produce identical scores.
+ * "Egg, whole, raw" scores 0+3=3, "Eggplant, raw" scores 2+3=5 → Egg wins.
+ */
 function scoreMatch(name: string, query: string): number {
   const lower = name.toLowerCase()
   const firstSegment = lower.split(',')[0].trim()
   const firstWord = firstSegment.split(/\s+/)[0]
+  const nameWords = lower.split(/[\s,]+/)
 
-  // Basic plural: "apple" also matches "apples" and vice versa
-  const queryPlural = query.endsWith('s') ? query.slice(0, -1) : query + 's'
-  const firstSegmentMatches = firstSegment === query || firstSegment === queryPlural
-  const firstWordMatches = firstWord === query || firstWord === queryPlural
+  const queryWords = query.split(/\s+/).filter(Boolean)
+  let tierSum = 0
 
-  // Tier 0: first comma-segment is exactly the query (e.g. "egg" → "Egg, whole, raw")
-  // Tier 1: first word of segment matches (e.g. "milk" → "Milk shakes")
-  // Tier 2: first segment starts with query (e.g. "egg" → "Eggnog")
-  // Tier 3: a later word starts with query
-  // Tier 4: name contains query as substring
-  // Tier 5: multi-word query, all words appear
-  let tier: number
-  if (firstSegmentMatches) {
-    tier = 0
-  } else if (firstWordMatches) {
-    tier = 1
-  } else if (firstSegment.startsWith(query)) {
-    tier = 2
-  } else {
-    const words = lower.split(/[\s,]+/)
-    const wordStartIdx = words.findIndex(w => w.startsWith(query))
-    if (wordStartIdx >= 0) {
-      tier = 3
-    } else {
-      const idx = lower.indexOf(query)
-      if (idx >= 0) {
-        tier = 4
-      } else {
-        const queryWords = query.split(/\s+/)
-        if (queryWords.length > 1 && queryWords.every(qw => lower.includes(qw))) {
-          tier = 5
-        } else {
-          return -1
-        }
-      }
-    }
+  for (const qw of queryWords) {
+    const tier = scoreWord(lower, firstSegment, firstWord, nameWords, qw)
+    if (tier < 0) return -1
+    tierSum += tier
   }
 
-  // Within each tier, prefer basic/raw foods and shorter (simpler) names
   const isBasic = /\braw\b|\bfresh\b|\bfluid\b/.test(lower) ? 0 : 1
-  return tier * 10000 + isBasic * 1000 + Math.min(name.length, 200)
+  return tierSum * 10000 + isBasic * 1000 + Math.min(name.length, 200)
 }
 
 export function FoodSearch({ onSelect, onClose, initialQuery = '' }: FoodSearchProps) {
