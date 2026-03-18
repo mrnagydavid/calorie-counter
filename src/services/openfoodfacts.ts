@@ -1,3 +1,5 @@
+import { db } from '../db/index'
+
 export interface CalorieVariant {
   kcal: number
   unit: 'serving' | '100g' | '100ml'
@@ -9,6 +11,12 @@ export interface OFFProduct {
   brand?: string
   variants: CalorieVariant[]
 }
+
+export type LookupError = 'timeout' | 'network' | 'not-found'
+
+export type LookupResult =
+  | { ok: true; product: OFFProduct; source: 'cache' | 'network' }
+  | { ok: false; error: LookupError }
 
 interface OFFNutriments {
   'energy-kcal_serving'?: number
@@ -62,25 +70,81 @@ function extractVariants(
   return variants
 }
 
-export async function lookupBarcode(barcode: string): Promise<OFFProduct | null> {
+const TIMEOUT_MS = 8000
+
+async function fetchFromOFF(barcode: string, signal?: AbortSignal): Promise<LookupResult> {
   const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'CalorieCounter/1.0' },
-  })
-  if (!res.ok) return null
-  const data: OFFResponse = await res.json()
-  if (data.status !== 1 || !data.product?.nutriments) return null
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
-  const variants = extractVariants(
-    data.product.nutriments,
-    data.product.quantity,
-    data.product.serving_size,
-  )
-  if (variants.length === 0) return null
-
-  return {
-    name: data.product.product_name || 'Unknown product',
-    brand: data.product.brands || undefined,
-    variants,
+  // If an external signal aborts, also abort our controller
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort(), { once: true })
   }
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'CalorieCounter/1.0' },
+      signal: controller.signal,
+    })
+    if (!res.ok) return { ok: false, error: 'network' }
+    const data: OFFResponse = await res.json()
+    if (data.status !== 1 || !data.product?.nutriments) {
+      return { ok: false, error: 'not-found' }
+    }
+
+    const variants = extractVariants(
+      data.product.nutriments,
+      data.product.quantity,
+      data.product.serving_size,
+    )
+    if (variants.length === 0) return { ok: false, error: 'not-found' }
+
+    return {
+      ok: true,
+      product: {
+        name: data.product.product_name || 'Unknown product',
+        brand: data.product.brands || undefined,
+        variants,
+      },
+      source: 'network',
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      // Distinguish external abort (unmount) from timeout
+      if (signal?.aborted) return { ok: false, error: 'network' }
+      return { ok: false, error: 'timeout' }
+    }
+    return { ok: false, error: 'network' }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function lookupBarcode(barcode: string, signal?: AbortSignal): Promise<LookupResult> {
+  // 1. Check cache
+  const cached = await db.barcodeCache.get(barcode)
+  if (cached) {
+    return {
+      ok: true,
+      product: { name: cached.name, brand: cached.brand, variants: cached.variants },
+      source: 'cache',
+    }
+  }
+
+  // 2. Fetch from network
+  const result = await fetchFromOFF(barcode, signal)
+
+  // 3. Cache successful results
+  if (result.ok) {
+    await db.barcodeCache.put({
+      barcode,
+      name: result.product.name,
+      brand: result.product.brand,
+      variants: result.product.variants,
+      cachedAt: new Date().toISOString(),
+    })
+  }
+
+  return result
 }

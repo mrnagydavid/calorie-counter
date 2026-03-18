@@ -47,11 +47,24 @@ export interface CustomFood {
   lastUsed: string
 }
 
+export interface BarcodeCacheEntry {
+  barcode: string
+  name: string
+  brand?: string
+  variants: Array<{
+    kcal: number
+    unit: 'serving' | '100g' | '100ml'
+    servingSize?: string
+  }>
+  cachedAt: string
+}
+
 export const db = new Dexie('CalorieCounterDB') as Dexie & {
   settings: EntityTable<Settings, 'id'>
   intakeEntries: EntityTable<IntakeEntry, 'id'>
   burnEntries: EntityTable<BurnEntry, 'id'>
   customFoods: EntityTable<CustomFood, 'id'>
+  barcodeCache: EntityTable<BarcodeCacheEntry, 'barcode'>
 }
 
 db.version(1).stores({
@@ -59,4 +72,8 @@ db.version(1).stores({
   intakeEntries: 'id, date, createdAt',
   burnEntries: 'id, date, createdAt',
   customFoods: 'id, name, barcode, lastUsed',
+})
+
+db.version(2).stores({
+  barcodeCache: 'barcode',
 })

@@ -2,7 +2,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { route } from 'preact-router'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { db } from '../db/index'
-import { lookupBarcode, type CalorieVariant, type OFFProduct } from '../services/openfoodfacts'
+import { lookupBarcode, type CalorieVariant, type OFFProduct, type LookupError } from '../services/openfoodfacts'
 import styles from './BarcodeScanner.module.css'
 import { NumericInput } from './NumericInput'
 
@@ -43,6 +43,7 @@ type State =
   | { step: 'scanning'; loading: boolean }
   | { step: 'found'; product: OFFProduct; barcode: string }
   | { step: 'not-found'; barcode: string }
+  | { step: 'lookup-error'; barcode: string; error: LookupError }
   | { step: 'error'; message: string }
 
 const unitLabels: Record<string, string> = {
@@ -67,6 +68,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const scannedRef = useRef(false)
   const runningRef = useRef(false)
+  const abortRef = useRef<AbortController | null>(null)
 
   const stopCamera = useCallback(() => {
     const scanner = scannerRef.current
@@ -122,8 +124,14 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
   const handleBarcode = useCallback(async (barcode: string) => {
     setState({ step: 'scanning', loading: true })
 
+    // Abort any previous in-flight lookup
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     // 1. Check local customFoods
     const customFood = await db.customFoods.where('barcode').equals(barcode).first()
+    if (controller.signal.aborted) return
     if (customFood) {
       setState({
         step: 'found',
@@ -142,18 +150,25 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
       return
     }
 
-    // 2. Query Open Food Facts
-    const product = await lookupBarcode(barcode)
-    if (product) {
-      setState({ step: 'found', barcode, product })
+    // 2. Query Open Food Facts (with cache)
+    const result = await lookupBarcode(barcode, controller.signal)
+    if (controller.signal.aborted) return
+
+    if (result.ok) {
+      setState({ step: 'found', barcode, product: result.product })
       setSelectedIdx(0)
       setAmount('100')
       setServingQty(1)
       return
     }
 
-    // 3. Not found
-    setState({ step: 'not-found', barcode })
+    if (result.error === 'not-found') {
+      setState({ step: 'not-found', barcode })
+      return
+    }
+
+    // Timeout or network error
+    setState({ step: 'lookup-error', barcode, error: result.error })
   }, [])
 
   useEffect(() => {
@@ -162,6 +177,14 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
       return stopCamera
     }
   }, [state.step, state.step === 'scanning' && state.loading])
+
+  // Cleanup on unmount: abort in-flight fetch + stop camera
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+      stopCamera()
+    }
+  }, [])
 
   const selectedVariant = state.step === 'found' ? state.product.variants[selectedIdx] : null
   const isServing = selectedVariant?.unit === 'serving'
@@ -208,7 +231,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
   }, [state, selectedVariant, isServing, servingQty, amount, total, date, onClose, startCamera])
 
   const handleNotFoundAdd = useCallback(() => {
-    if (state.step !== 'not-found') return
+    if (state.step !== 'not-found' && state.step !== 'lookup-error') return
     stopCamera()
     onClose()
     route(`/add-intake/${date}?barcode=${state.barcode}`)
@@ -386,6 +409,29 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
               <button class={styles.secondaryButton} onClick={() => {
                 setState({ step: 'scanning', loading: false })
                 startCamera()
+              }}>
+                Scan Again
+              </button>
+            </div>
+          </>
+        )}
+
+        {state.step === 'lookup-error' && (
+          <>
+            <div class={styles.notFoundText}>
+              {state.error === 'timeout'
+                ? 'The lookup timed out. Open Food Facts may be slow or unavailable right now.'
+                : 'Network error. Check your connection and try again.'}
+            </div>
+            <div class={styles.actions}>
+              <button class={styles.primaryButton} onClick={() => handleBarcode(state.barcode)}>
+                Retry
+              </button>
+              <button class={styles.secondaryButton} onClick={handleNotFoundAdd}>
+                Add Manually
+              </button>
+              <button class={styles.secondaryButton} onClick={() => {
+                setState({ step: 'scanning', loading: false })
               }}>
                 Scan Again
               </button>
