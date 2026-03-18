@@ -50,7 +50,7 @@
 }
 
 .recentList {
-  max-height: 156px;
+  max-height: 208px;
   overflow-y: auto;
   border-radius: var(--radius-md);
   background: var(--color-bg-secondary);

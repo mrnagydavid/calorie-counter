@@ -5,6 +5,7 @@ import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
 import { todayString, getDayOfWeek } from '../db/dates'
 import { BarcodeScanner, type ScannedEntry } from '../components/BarcodeScanner'
+import { FoodSearch, type FoodSearchResult } from '../components/FoodSearch'
 import { NumericInput } from '../components/NumericInput'
 import styles from './MealPlanner.module.css'
 
@@ -31,6 +32,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const date = dateProp || todayString()
   const [items, setItems] = useState<DraftItem[]>([])
   const [scanning, setScanning] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Inline add form
@@ -107,6 +109,18 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
       unit: recent.unit,
     }])
   }
+
+  const handleSearchResult = useCallback((result: FoodSearchResult) => {
+    setItems((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      name: result.name,
+      calories: result.kcal,
+      unitCalories: result.kcal,
+      quantity: 1,
+      unit: '100g',
+    }])
+    setSearching(false)
+  }, [])
 
   const handleScannedEntry = useCallback((entry: ScannedEntry) => {
     setItems((prev) => [...prev, {
@@ -233,13 +247,6 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
             onInput={(e) => setAddCal((e.target as HTMLInputElement).value)}
             placeholder="kcal"
           />
-          <input
-            type="text"
-            class={styles.addNameInput}
-            value={addName}
-            onInput={(e) => setAddName((e.target as HTMLInputElement).value)}
-            placeholder="Name (optional)"
-          />
           <button
             class={styles.addButton}
             disabled={!addCal || parseInt(addCal, 10) <= 0}
@@ -248,9 +255,25 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
             +
           </button>
         </div>
-        <button class={styles.scanButton} onClick={() => setScanning(true)}>
-          Scan Barcode
-        </button>
+        <input
+          type="text"
+          class={styles.addNameInput}
+          value={addName}
+          onInput={(e) => setAddName((e.target as HTMLInputElement).value)}
+          placeholder="Name (optional)"
+        />
+        <div class={styles.lookupButtons}>
+          <button class={styles.lookupButton} onClick={() => setSearching(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            Search Food DB
+          </button>
+          <button class={styles.lookupButton} onClick={() => setScanning(true)}>
+            Scan Barcode
+          </button>
+        </div>
       </div>
 
       {/* Actions */}
@@ -266,6 +289,10 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
           Log All ({items.length})
         </button>
       </div>
+
+      {searching && (
+        <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} />
+      )}
 
       {scanning && (
         <BarcodeScanner

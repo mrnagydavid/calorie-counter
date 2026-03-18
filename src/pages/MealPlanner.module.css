@@ -38,6 +38,9 @@
 
 /* Sections */
 .section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 0 16px;
 }
 
@@ -203,11 +206,11 @@
 .addRow {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
 }
 
 .addCalInput {
-  width: 72px;
+  flex: 1;
+  min-width: 0;
   padding: 8px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -222,11 +225,11 @@
 }
 
 .addNameInput {
-  flex: 1;
-  padding: 8px;
+  width: 100%;
+  padding: 8px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  font-size: 15px;
+  font-size: 14px;
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -240,8 +243,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-md);
   background: var(--color-primary);
   color: white;
@@ -258,8 +261,17 @@
   background: var(--color-primary-dark);
 }
 
-.scanButton {
-  width: 100%;
+.lookupButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.lookupButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 10px;
   border-radius: var(--radius-md);
   background: var(--color-bg-secondary);
@@ -269,7 +281,7 @@
   border: 1px solid var(--color-border);
 }
 
-.scanButton:hover {
+.lookupButton:hover {
   background: var(--color-border);
 }
 
