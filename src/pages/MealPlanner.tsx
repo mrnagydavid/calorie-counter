@@ -4,9 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
 import { todayString, getDayOfWeek } from '../db/dates'
-import { BarcodeScanner, type ScannedEntry } from '../components/BarcodeScanner'
-import { FoodSearch, type FoodSearchResult } from '../components/FoodSearch'
-import { CustomFoodSearch, type CustomFoodResult } from '../components/CustomFoodSearch'
+import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { NumericInput } from '../components/NumericInput'
 import styles from './MealPlanner.module.css'
 
@@ -32,14 +30,8 @@ function barColor(ratio: number): string {
 export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const date = dateProp || todayString()
   const [items, setItems] = useState<DraftItem[]>([])
-  const [scanning, setScanning] = useState(false)
-  const [searching, setSearching] = useState(false)
-  const [searchingCustom, setSearchingCustom] = useState(false)
+  const [picking, setPicking] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-
-  // Inline add form
-  const [addCal, setAddCal] = useState('')
-  const [addName, setAddName] = useState('')
 
   // Budget
   const [budgetOverride, setBudgetOverride] = useState<string | null>(null)
@@ -49,26 +41,6 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const settings = useLiveQuery(() => db.settings.get('user-settings'))
   const intakes = useLiveQuery(() => db.intakeEntries.where('date').equals(date).toArray(), [date])
   const burns = useLiveQuery(() => db.burnEntries.where('date').equals(date).toArray(), [date])
-
-  const customFoodCount = useLiveQuery(() => db.customFoods.filter((f) => !f.barcode).count())
-
-  // Recents for quick-add
-  const allIntakes = useLiveQuery(() =>
-    db.intakeEntries.orderBy('createdAt').reverse().toArray(),
-  )
-
-  const recents = useMemo(() => {
-    if (!allIntakes) return []
-    const seen = new Set<string>()
-    const result: { name: string; unitCalories: number; unit: string }[] = []
-    for (const entry of allIntakes) {
-      if (!entry.name || seen.has(entry.name)) continue
-      seen.add(entry.name)
-      result.push({ name: entry.name, unitCalories: entry.unitCalories, unit: entry.unit })
-      if (result.length >= 6) break
-    }
-    return result
-  }, [allIntakes])
 
   const remaining = useMemo(() => {
     if (!settings || !intakes || !burns) return null
@@ -88,65 +60,16 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const ratio = budget > 0 ? draftTotal / budget : 0
   const pct = Math.min(ratio * 100, 100)
 
-  const addManualItem = () => {
-    const cal = parseInt(addCal, 10)
-    if (!cal || cal <= 0) return
-    setItems([...items, {
-      id: crypto.randomUUID(),
-      name: addName.trim() || `${cal} kcal`,
-      calories: cal,
-      unitCalories: cal,
-      quantity: 1,
-      unit: 'piece',
-    }])
-    setAddCal('')
-    setAddName('')
-  }
-
-  const addRecentItem = (recent: { name: string; unitCalories: number; unit: string }) => {
-    setItems([...items, {
-      id: crypto.randomUUID(),
-      name: recent.name,
-      calories: recent.unitCalories,
-      unitCalories: recent.unitCalories,
-      quantity: 1,
-      unit: recent.unit,
-    }])
-  }
-
-  const handleSearchResult = useCallback((result: FoodSearchResult) => {
+  const handleFoodPicked = useCallback((result: FoodPickerResult) => {
     setItems((prev) => [...prev, {
       id: crypto.randomUUID(),
       name: result.name,
-      calories: result.kcal,
-      unitCalories: result.kcal,
-      quantity: 1,
-      unit: '100g',
-    }])
-    setSearching(false)
-  }, [])
-
-  const handleCustomFoodResult = useCallback((result: CustomFoodResult) => {
-    setItems((prev) => [...prev, {
-      id: crypto.randomUUID(),
-      name: result.name,
-      calories: result.caloriesPerUnit,
-      unitCalories: result.caloriesPerUnit,
-      quantity: 1,
+      calories: result.calories,
+      unitCalories: result.unitCalories,
+      quantity: result.quantity,
       unit: result.unit,
     }])
-    setSearchingCustom(false)
-  }, [])
-
-  const handleScannedEntry = useCallback((entry: ScannedEntry) => {
-    setItems((prev) => [...prev, {
-      id: crypto.randomUUID(),
-      name: entry.name,
-      calories: entry.calories,
-      unitCalories: entry.unitCalories,
-      quantity: entry.quantity,
-      unit: entry.unit,
-    }])
+    setPicking(false)
   }, [])
 
   const removeItem = (id: string) => {
@@ -237,64 +160,11 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         </div>
       )}
 
-      {/* Quick add from recents */}
-      {recents.length > 0 && (
-        <div class={styles.section}>
-          <div class={styles.sectionTitle}>Recent</div>
-          <div class={styles.recentList}>
-            {recents.map((r) => (
-              <button key={r.name} class={styles.recentItem} onClick={() => addRecentItem(r)}>
-                <span class={styles.recentName}>{r.name}</span>
-                <span class={styles.recentCal}>{r.unitCalories} kcal</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Inline add */}
+      {/* Add item */}
       <div class={styles.section}>
-        <div class={styles.sectionTitle}>Add item</div>
-        <div class={styles.addRow}>
-          <NumericInput
-            inputMode="numeric"
-            class={styles.addCalInput}
-            value={addCal}
-            onInput={(e) => setAddCal((e.target as HTMLInputElement).value)}
-            placeholder="kcal"
-          />
-          <button
-            class={styles.addButton}
-            disabled={!addCal || parseInt(addCal, 10) <= 0}
-            onClick={addManualItem}
-          >
-            +
-          </button>
-        </div>
-        <input
-          type="text"
-          class={styles.addNameInput}
-          value={addName}
-          onInput={(e) => setAddName((e.target as HTMLInputElement).value)}
-          placeholder="Name (optional)"
-        />
-        <div class={styles.lookupButtons}>
-          <button class={styles.lookupButton} onClick={() => setSearching(true)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-            Search Food DB
-          </button>
-          <button class={styles.lookupButton} onClick={() => setScanning(true)}>
-            Scan Barcode
-          </button>
-        </div>
-        {(customFoodCount ?? 0) > 0 && (
-          <button class={styles.lookupButton} onClick={() => setSearchingCustom(true)}>
-            Search my prepared meals
-          </button>
-        )}
+        <button class={styles.addItemButton} onClick={() => setPicking(true)}>
+          + Add item
+        </button>
       </div>
 
       {/* Actions */}
@@ -311,19 +181,11 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         </button>
       </div>
 
-      {searching && (
-        <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} />
-      )}
-
-      {searchingCustom && (
-        <CustomFoodSearch onSelect={handleCustomFoodResult} onClose={() => setSearchingCustom(false)} />
-      )}
-
-      {scanning && (
-        <BarcodeScanner
+      {picking && (
+        <FoodPicker
           date={date}
-          onClose={() => setScanning(false)}
-          onAddEntry={handleScannedEntry}
+          onSelect={handleFoodPicked}
+          onClose={() => setPicking(false)}
         />
       )}
     </div>

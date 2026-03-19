@@ -30,6 +30,7 @@ export interface ScannedEntry {
   quantity: number
   unit: string
   barcode: string
+  portions?: { desc: string; g: number }[]
 }
 
 interface BarcodeScannerProps {
@@ -133,6 +134,18 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
     const customFood = await db.customFoods.where('barcode').equals(barcode).first()
     if (controller.signal.aborted) return
     if (customFood) {
+      // When used inside FoodPicker, return immediately with per-unit data
+      if (onAddEntry) {
+        onAddEntry({
+          name: customFood.name,
+          calories: customFood.caloriesPerUnit,
+          unitCalories: customFood.caloriesPerUnit,
+          quantity: 1,
+          unit: customFood.unit,
+          barcode,
+        })
+        return
+      }
       setState({
         step: 'found',
         barcode,
@@ -155,6 +168,34 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
     if (controller.signal.aborted) return
 
     if (result.ok) {
+      // When used inside FoodPicker, return immediately with per-100g data
+      if (onAddEntry) {
+        const product = result.product
+        const per100g = product.variants.find((v) => v.unit === '100g' || v.unit === '100ml')
+        const variant = per100g || product.variants[0]
+        const entryName = [product.name, product.brand].filter(Boolean).join(' — ')
+
+        // Extract serving size as a portion chip
+        const portions: { desc: string; g: number }[] = []
+        const serving = product.variants.find((v) => v.unit === 'serving')
+        if (serving?.servingSize) {
+          const gMatch = serving.servingSize.match(/(\d+(?:\.\d+)?)\s*g/)
+          if (gMatch) {
+            portions.push({ desc: 'serving', g: parseFloat(gMatch[1]) })
+          }
+        }
+
+        onAddEntry({
+          name: entryName,
+          calories: variant.kcal,
+          unitCalories: variant.kcal,
+          quantity: 1,
+          unit: variant.unit,
+          barcode,
+          portions: portions.length > 0 ? portions : undefined,
+        })
+        return
+      }
       setState({ step: 'found', barcode, product: result.product })
       setSelectedIdx(0)
       setAmount('100')
@@ -233,9 +274,15 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
   const handleNotFoundAdd = useCallback(() => {
     if (state.step !== 'not-found' && state.step !== 'lookup-error') return
     stopCamera()
-    onClose()
-    route(`/add-intake/${date}?barcode=${state.barcode}`)
-  }, [state, date, onClose, stopCamera])
+    // When used inside FoodPicker (onAddEntry provided), just close — the user
+    // returns to FoodPicker and enters data manually there.
+    if (onAddEntry) {
+      onClose()
+    } else {
+      onClose()
+      route(`/add-intake/${date}?barcode=${state.barcode}`)
+    }
+  }, [state, date, onClose, onAddEntry, stopCamera])
 
   const handleClose = useCallback(() => {
     stopCamera()
@@ -360,11 +407,13 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
 
             <div class={styles.actions}>
               <button class={styles.primaryButton} onClick={() => addEntry(false)}>
-                Add & Close
+                {onAddEntry ? 'Add' : 'Add & Close'}
               </button>
-              <button class={styles.secondaryButton} onClick={() => addEntry(true)}>
-                Add & Scan Next
-              </button>
+              {!onAddEntry && (
+                <button class={styles.secondaryButton} onClick={() => addEntry(true)}>
+                  Add & Scan Next
+                </button>
+              )}
             </div>
           </>
         )}
