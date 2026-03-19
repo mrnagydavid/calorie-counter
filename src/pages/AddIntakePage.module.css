@@ -130,17 +130,22 @@
   border-radius: var(--radius-sm);
 }
 
-/* Search button */
+/* Search buttons */
+.searchButtons {
+  display: flex;
+  gap: 8px;
+}
+
 .searchButton {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
+  gap: 6px;
+  padding: 10px;
   border-radius: var(--radius-md);
   background: var(--color-bg-secondary);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);

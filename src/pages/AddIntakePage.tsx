@@ -191,6 +191,23 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         <h1 class={styles.headerTitle}>Add Intake</h1>
       </div>
 
+      {/* Search buttons (hidden when already filled from search) */}
+      {!fromSearch && (
+        <div class={styles.section}>
+          <div class={styles.sectionTitle}>Search</div>
+          <div class={styles.searchButtons}>
+            <button class={styles.searchButton} onClick={() => setSearching(true)}>
+              Food database
+            </button>
+            {(customFoodCount ?? 0) > 0 && (
+              <button class={styles.searchButton} onClick={() => setSearchingCustom(true)}>
+                My recipes
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {recents.length > 0 && (
         <div class={styles.section}>
           <div class={styles.sectionTitle}>Recent</div>
@@ -207,24 +224,6 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
             ))}
           </div>
         </div>
-      )}
-
-      {/* Search buttons (hidden when already filled from search) */}
-      {!fromSearch && (
-        <>
-          <button class={styles.searchButton} onClick={() => setSearching(true)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-            Search food database
-          </button>
-          {(customFoodCount ?? 0) > 0 && (
-            <button class={styles.searchButton} onClick={() => setSearchingCustom(true)}>
-              Search my prepared meals
-            </button>
-          )}
-        </>
       )}
 
       {/* 1. Unit selector (hidden when filled from search) */}
