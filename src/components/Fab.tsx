@@ -21,6 +21,9 @@ export function Fab({ date, remaining, onScanBarcode }: FabProps) {
       {open && <div class={styles.backdrop} onClick={() => setOpen(false)} />}
       {open && (
         <div class={styles.menu}>
+          <button class={styles.menuItem} onClick={() => go('/recipe-calculator')}>
+            Recipe Calculator
+          </button>
           <button class={styles.menuItem} onClick={() => go(`/planner/${date}`)}>
             Plan a Meal{remaining != null && remaining > 0 ? ` — ${remaining} left` : ''}
           </button>

@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { FoodSearch, type FoodSearchResult } from '../components/FoodSearch'
+import { CustomFoodSearch, type CustomFoodResult } from '../components/CustomFoodSearch'
 import { NumericInput } from '../components/NumericInput'
 import styles from './AddIntakePage.module.css'
 
@@ -49,10 +50,13 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
   const [name, setName] = useState('')
   const [saveAsCustom, setSaveAsCustom] = useState(hasBarcode)
   const [searching, setSearching] = useState(false)
+  const [searchingCustom, setSearchingCustom] = useState(false)
   const [portions, setPortions] = useState<{ desc: string; g: number }[] | null>(null)
   const [fromSearch, setFromSearch] = useState(false)
   const [isLiquid, setIsLiquid] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  const customFoodCount = useLiveQuery(() => db.customFoods.filter((f) => !f.barcode).count())
 
   const allIntakes = useLiveQuery(() =>
     db.intakeEntries.orderBy('createdAt').reverse().toArray(),
@@ -108,6 +112,22 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
     setIsLiquid(liquid)
     setSearchQuery(query)
     setSearching(false)
+  }, [])
+
+  const handleCustomFoodResult = useCallback((result: CustomFoodResult) => {
+    setName(result.name)
+    setUnitCalories(String(result.caloriesPerUnit))
+    setUnit(result.unit)
+    setPortions(null)
+    setFromSearch(true)
+    setIsLiquid(false)
+    setSearchQuery('')
+    if (result.unit === '100g' || result.unit === '100ml') {
+      setQuantity('100')
+    } else {
+      setQuantity('1')
+    }
+    setSearchingCustom(false)
   }, [])
 
   const handlePortionTap = useCallback((portion: { desc: string; g: number }) => {
@@ -189,15 +209,22 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         </div>
       )}
 
-      {/* Search button (hidden when already filled from search) */}
+      {/* Search buttons (hidden when already filled from search) */}
       {!fromSearch && (
-        <button class={styles.searchButton} onClick={() => setSearching(true)}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-          Search food database
-        </button>
+        <>
+          <button class={styles.searchButton} onClick={() => setSearching(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            Search food database
+          </button>
+          {(customFoodCount ?? 0) > 0 && (
+            <button class={styles.searchButton} onClick={() => setSearchingCustom(true)}>
+              Search my prepared meals
+            </button>
+          )}
+        </>
       )}
 
       {/* 1. Unit selector (hidden when filled from search) */}
@@ -349,6 +376,10 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
 
       {searching && (
         <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} initialQuery={searchQuery} />
+      )}
+
+      {searchingCustom && (
+        <CustomFoodSearch onSelect={handleCustomFoodResult} onClose={() => setSearchingCustom(false)} />
       )}
     </div>
   )

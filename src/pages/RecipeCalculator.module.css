@@ -1,0 +1,330 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 0;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.backButton:hover {
+  background: var(--color-bg-secondary);
+}
+
+.backButton svg {
+  width: 22px;
+  height: 22px;
+}
+
+.headerTitle {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Recipe name */
+.nameInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.nameInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.nameHint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* Ingredient list */
+.itemList {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.itemName {
+  flex: 1;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemGrams {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
+.itemCal {
+  font-size: 15px;
+  font-weight: 600;
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
+.itemActions {
+  padding: 6px 0 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.deleteButton {
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--color-bg-secondary);
+  color: var(--color-red);
+  border: 1px solid var(--color-border);
+}
+
+.deleteButton:hover {
+  background: var(--color-red);
+  color: white;
+}
+
+.ingredientTotal {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+/* Inline add */
+.addRow {
+  display: flex;
+  gap: 8px;
+}
+
+.addInput {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.addInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.addNameInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.addNameInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.addButton:disabled {
+  opacity: 0.4;
+}
+
+.addButton:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.lookupButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.lookupButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+
+.lookupButton:hover {
+  background: var(--color-border);
+}
+
+/* Recents */
+.recentList {
+  display: flex;
+  flex-direction: column;
+}
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  width: 100%;
+}
+
+.recentItem:last-child {
+  border-bottom: none;
+}
+
+.recentName {
+  flex: 1;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recentCal {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-left: 8px;
+}
+
+/* Result */
+.resultRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weightInput {
+  width: 100px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.weightInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.unitLabel {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.weightHint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.result {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.dismissButton,
+.saveButton {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dismissButton {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.dismissButton:hover {
+  background: var(--color-border);
+}
+
+.saveButton {
+  background: var(--color-primary);
+  color: white;
+}
+
+.saveButton:disabled {
+  opacity: 0.4;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}

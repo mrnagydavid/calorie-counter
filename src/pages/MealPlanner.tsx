@@ -6,6 +6,7 @@ import { getOrCreateSettings } from '../db/settings'
 import { todayString, getDayOfWeek } from '../db/dates'
 import { BarcodeScanner, type ScannedEntry } from '../components/BarcodeScanner'
 import { FoodSearch, type FoodSearchResult } from '../components/FoodSearch'
+import { CustomFoodSearch, type CustomFoodResult } from '../components/CustomFoodSearch'
 import { NumericInput } from '../components/NumericInput'
 import styles from './MealPlanner.module.css'
 
@@ -33,6 +34,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const [items, setItems] = useState<DraftItem[]>([])
   const [scanning, setScanning] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [searchingCustom, setSearchingCustom] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Inline add form
@@ -47,6 +49,8 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const settings = useLiveQuery(() => db.settings.get('user-settings'))
   const intakes = useLiveQuery(() => db.intakeEntries.where('date').equals(date).toArray(), [date])
   const burns = useLiveQuery(() => db.burnEntries.where('date').equals(date).toArray(), [date])
+
+  const customFoodCount = useLiveQuery(() => db.customFoods.filter((f) => !f.barcode).count())
 
   // Recents for quick-add
   const allIntakes = useLiveQuery(() =>
@@ -120,6 +124,18 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
       unit: '100g',
     }])
     setSearching(false)
+  }, [])
+
+  const handleCustomFoodResult = useCallback((result: CustomFoodResult) => {
+    setItems((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      name: result.name,
+      calories: result.caloriesPerUnit,
+      unitCalories: result.caloriesPerUnit,
+      quantity: 1,
+      unit: result.unit,
+    }])
+    setSearchingCustom(false)
   }, [])
 
   const handleScannedEntry = useCallback((entry: ScannedEntry) => {
@@ -274,6 +290,11 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
             Scan Barcode
           </button>
         </div>
+        {(customFoodCount ?? 0) > 0 && (
+          <button class={styles.lookupButton} onClick={() => setSearchingCustom(true)}>
+            Search my prepared meals
+          </button>
+        )}
       </div>
 
       {/* Actions */}
@@ -292,6 +313,10 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
 
       {searching && (
         <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} />
+      )}
+
+      {searchingCustom && (
+        <CustomFoodSearch onSelect={handleCustomFoodResult} onClose={() => setSearchingCustom(false)} />
       )}
 
       {scanning && (
