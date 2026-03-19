@@ -175,8 +175,10 @@ function DayOverridesSection({
 }
 
 function DataManagementSection() {
+  const settings = useLiveQuery(() => db.settings.get('user-settings'))
   const [dialog, setDialog] = useState<'import-confirm' | 'clear-confirm' | null>(null)
   const [importData, setImportData] = useState<string | null>(null)
+  const reminderEnabled = settings?.exportReminderEnabled ?? true
 
   const handleExport = useCallback(async () => {
     const [settings, intakeEntries, burnEntries, customFoods] = await Promise.all([
@@ -262,6 +264,19 @@ function DataManagementSection() {
   return (
     <section class={styles.section}>
       <h2 class={styles.sectionTitle}>Data Management</h2>
+      <div class={styles.checkboxRow}>
+        <input
+          type="checkbox"
+          id="exportReminder"
+          checked={reminderEnabled}
+          onChange={(e) =>
+            updateSettings({
+              exportReminderEnabled: (e.target as HTMLInputElement).checked,
+            })
+          }
+        />
+        <label for="exportReminder">Remind monthly to export my data</label>
+      </div>
       <div class={styles.dataButtons}>
         <button class={styles.dataButton} onClick={handleExport}>
           Export Data (JSON)

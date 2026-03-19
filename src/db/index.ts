@@ -13,6 +13,8 @@ export interface Settings {
   id: 'user-settings'
   baselineCalories: number
   dayOverrides: Partial<Record<DayOfWeek, number>>
+  exportReminderEnabled: boolean
+  exportReminderDismissedUntil?: string // YYYY-MM format
   createdAt: string
   updatedAt: string
 }

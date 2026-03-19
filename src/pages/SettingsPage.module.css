@@ -127,6 +127,19 @@
 }
 
 /* Data management */
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.checkboxRow input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
 .dataButtons {
   display: flex;
   flex-direction: column;

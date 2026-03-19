@@ -9,6 +9,7 @@ import { EntryList } from '../components/EntryList'
 import { Fab } from '../components/Fab'
 import { BarcodeScanner } from '../components/BarcodeScanner'
 import { InstallBanner } from '../components/InstallBanner'
+import { ExportReminderBanner } from '../components/ExportReminderBanner'
 import styles from './Dashboard.module.css'
 
 export function Dashboard() {
@@ -45,6 +46,7 @@ export function Dashboard() {
   return (
     <div class={styles.page}>
       <InstallBanner />
+      <ExportReminderBanner settings={settings} />
       <DateNav date={date} onDateChange={setDate} />
       <CalorieBudgetBar consumed={consumed} target={target} />
       <EntryList intakes={intakes} burns={burns} />

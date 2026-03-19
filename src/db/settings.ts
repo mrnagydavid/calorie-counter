@@ -4,6 +4,7 @@ const DEFAULT_SETTINGS: Settings = {
   id: 'user-settings',
   baselineCalories: 2000,
   dayOverrides: {},
+  exportReminderEnabled: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 }
@@ -16,7 +17,7 @@ export async function getOrCreateSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(
-  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides'>>,
+  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil'>>,
 ): Promise<void> {
   const current = await getOrCreateSettings()
   await db.settings.put({
