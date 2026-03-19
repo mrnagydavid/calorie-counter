@@ -87,6 +87,7 @@ async function fetchFromOFF(barcode: string, signal?: AbortSignal): Promise<Look
       headers: { 'User-Agent': 'CalorieCounter/1.0' },
       signal: controller.signal,
     })
+    if (res.status === 404) return { ok: false, error: 'not-found' }
     if (!res.ok) return { ok: false, error: 'network' }
     const data: OFFResponse = await res.json()
     if (data.status !== 1 || !data.product?.nutriments) {
