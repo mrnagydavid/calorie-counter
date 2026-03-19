@@ -27,14 +27,14 @@ export function Fab({ date, remaining, onScanBarcode }: FabProps) {
           <button class={styles.menuItem} onClick={() => go(`/planner/${date}`)}>
             Plan a Meal{remaining != null && remaining > 0 ? ` — ${remaining} left` : ''}
           </button>
+          <button class={styles.menuItem} onClick={() => go(`/add-burn/${date}`)}>
+            Burned Calories
+          </button>
           <button class={styles.menuItem} onClick={() => go(`/add-intake/${date}`)}>
             Manual Entry
           </button>
           <button class={styles.menuItem} onClick={() => { setOpen(false); onScanBarcode() }}>
             Scan Barcode
-          </button>
-          <button class={styles.menuItem} onClick={() => go(`/add-burn/${date}`)}>
-            Burned Calories
           </button>
         </div>
       )}
