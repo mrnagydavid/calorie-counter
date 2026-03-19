@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'preact/hooks'
-import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
@@ -48,11 +47,8 @@ export function Dashboard() {
       <InstallBanner />
       <DateNav date={date} onDateChange={setDate} />
       <CalorieBudgetBar consumed={consumed} target={target} />
-      <button class={styles.plannerButton} onClick={() => route(`/planner/${date}`)}>
-        Plan a meal{remaining > 0 ? ` — ${remaining} remaining` : ''}
-      </button>
       <EntryList intakes={intakes} burns={burns} />
-      <Fab date={date} onScanBarcode={() => setScanning(true)} />
+      <Fab date={date} remaining={remaining} onScanBarcode={() => setScanning(true)} />
       {scanning && (
         <BarcodeScanner date={date} onClose={() => setScanning(false)} />
       )}

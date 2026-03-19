@@ -4,10 +4,11 @@ import styles from './Fab.module.css'
 
 interface FabProps {
   date: string
+  remaining?: number
   onScanBarcode: () => void
 }
 
-export function Fab({ date, onScanBarcode }: FabProps) {
+export function Fab({ date, remaining, onScanBarcode }: FabProps) {
   const [open, setOpen] = useState(false)
 
   const go = (path: string) => {
@@ -20,6 +21,9 @@ export function Fab({ date, onScanBarcode }: FabProps) {
       {open && <div class={styles.backdrop} onClick={() => setOpen(false)} />}
       {open && (
         <div class={styles.menu}>
+          <button class={styles.menuItem} onClick={() => go(`/planner/${date}`)}>
+            Plan a Meal{remaining != null && remaining > 0 ? ` — ${remaining} left` : ''}
+          </button>
           <button class={styles.menuItem} onClick={() => go(`/add-intake/${date}`)}>
             Manual Entry
           </button>

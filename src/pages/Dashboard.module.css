@@ -3,18 +3,3 @@
   flex-direction: column;
   gap: 20px;
 }
-
-.plannerButton {
-  padding: 10px 16px;
-  border-radius: var(--radius-md);
-  background: var(--color-bg-secondary);
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 500;
-  border: 1px solid var(--color-border);
-  text-align: center;
-}
-
-.plannerButton:hover {
-  background: var(--color-border);
-}
