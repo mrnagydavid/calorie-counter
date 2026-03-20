@@ -22,8 +22,6 @@ interface FoodPickerProps {
   date?: string
   showSaveAsCustom?: boolean
   submitLabel?: string
-  /** Auto-open barcode scanner on mount */
-  autoScan?: boolean
 }
 
 interface RecentFood {
@@ -60,7 +58,6 @@ export function FoodPicker({
   date = '',
   showSaveAsCustom = false,
   submitLabel = 'Add',
-  autoScan = false,
 }: FoodPickerProps) {
   const [unit, setUnit] = useState('100g')
   const [customUnit, setCustomUnit] = useState('')
@@ -71,7 +68,7 @@ export function FoodPicker({
 
   const [searching, setSearching] = useState(false)
   const [searchingCustom, setSearchingCustom] = useState(false)
-  const [scanning, setScanning] = useState(autoScan)
+  const [scanning, setScanning] = useState(false)
 
   const [portions, setPortions] = useState<{ desc: string; g: number }[] | null>(null)
   const [fromSearch, setFromSearch] = useState(false)

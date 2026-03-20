@@ -48,7 +48,6 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       date={date}
       showSaveAsCustom
       submitLabel="Add Entry"
-      autoScan={hasBarcode}
     />
   )
 }
