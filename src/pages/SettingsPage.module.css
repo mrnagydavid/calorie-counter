@@ -158,8 +158,13 @@
   text-align: left;
 }
 
-.dataButton:hover {
+.dataButton:active {
   background: var(--color-border);
+}
+
+.dataButton.success {
+  background: #ecfdf5;
+  color: var(--color-primary-dark);
 }
 
 .dataButton.danger {

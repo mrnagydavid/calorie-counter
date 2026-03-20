@@ -178,6 +178,7 @@ function DataManagementSection() {
   const settings = useLiveQuery(() => db.settings.get('user-settings'))
   const [dialog, setDialog] = useState<'import-confirm' | 'clear-confirm' | null>(null)
   const [importData, setImportData] = useState<string | null>(null)
+  const [exportDone, setExportDone] = useState(false)
   const reminderEnabled = settings?.exportReminderEnabled ?? true
 
   const handleExport = useCallback(async () => {
@@ -200,6 +201,8 @@ function DataManagementSection() {
     a.download = `calorie-counter-backup-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+    setExportDone(true)
+    setTimeout(() => setExportDone(false), 2000)
   }, [])
 
   const handleImportFile = useCallback(() => {
@@ -277,8 +280,11 @@ function DataManagementSection() {
         <label for="exportReminder">Remind monthly to export my data</label>
       </div>
       <div class={styles.dataButtons}>
-        <button class={styles.dataButton} onClick={handleExport}>
-          Export Data (JSON)
+        <button
+          class={`${styles.dataButton} ${exportDone ? styles.success : ''}`}
+          onClick={handleExport}
+        >
+          {exportDone ? 'Exported!' : 'Export Data (JSON)'}
         </button>
         <button class={styles.dataButton} onClick={handleImportFile}>
           Import Data (JSON)
