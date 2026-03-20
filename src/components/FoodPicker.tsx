@@ -97,7 +97,7 @@ export function FoodPicker({
         quantity: entry.quantity,
         unit: entry.unit,
       })
-      if (result.length >= 10) break
+      if (result.length >= 100) break
     }
     return result
   }, [allIntakes])
