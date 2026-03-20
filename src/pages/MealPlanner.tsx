@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'preact/hooks'
+import { useState, useEffect, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
-import { todayString, getDayOfWeek } from '../db/dates'
+import { todayString } from '../db/dates'
+import { getTargetForDate } from '../db/dailyTargets'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { NumericInput } from '../components/NumericInput'
 import styles from './MealPlanner.module.css'
@@ -42,15 +43,24 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const intakes = useLiveQuery(() => db.intakeEntries.where('date').equals(date).toArray(), [date])
   const burns = useLiveQuery(() => db.burnEntries.where('date').equals(date).toArray(), [date])
 
-  const remaining = useMemo(() => {
-    if (!settings || !intakes || !burns) return null
-    const dayOfWeek = getDayOfWeek(date)
-    const baseTarget = settings.dayOverrides[dayOfWeek] ?? settings.baselineCalories
+  const storedTarget = useLiveQuery(() => db.dailyTargets.get(date), [date])
+  const [baseTarget, setBaseTarget] = useState<number | null>(null)
+  useEffect(() => {
+    if (!settings) return
+    if (storedTarget) {
+      setBaseTarget(storedTarget.target)
+    } else {
+      getTargetForDate(date, settings).then((t) => setBaseTarget(t))
+    }
+  }, [date, settings, storedTarget])
+
+  const remaining = (() => {
+    if (baseTarget == null || !intakes || !burns) return null
     const burned = burns.reduce((sum, e) => sum + e.calories, 0)
     const target = baseTarget + burned
     const consumed = intakes.reduce((sum, e) => sum + e.calories, 0)
     return target - consumed
-  }, [settings, intakes, burns, date])
+  })()
 
   if (remaining === null) return null
 

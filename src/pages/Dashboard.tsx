@@ -2,7 +2,8 @@ import { useState, useEffect } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
-import { todayString, getDayOfWeek } from '../db/dates'
+import { todayString } from '../db/dates'
+import { ensureTodayTarget, getTargetForDate } from '../db/dailyTargets'
 import { DateNav } from '../components/DateNav'
 import { CalorieBudgetBar } from '../components/CalorieBudgetBar'
 import { EntryList } from '../components/EntryList'
@@ -26,18 +27,32 @@ export function Dashboard() {
   }, [])
   const [scanning, setScanning] = useState(false)
 
+  const settings = useLiveQuery(() => db.settings.get('user-settings'))
+
   useEffect(() => {
-    getOrCreateSettings()
+    getOrCreateSettings().then((s) => ensureTodayTarget(s))
   }, [])
 
-  const settings = useLiveQuery(() => db.settings.get('user-settings'))
+  // Read the stored target reactively; backfill runs via useEffect (outside read-only liveQuery)
+  const storedTarget = useLiveQuery(
+    () => db.dailyTargets.get(date),
+    [date],
+  )
+  const [baseTarget, setBaseTarget] = useState<number | null>(null)
+  useEffect(() => {
+    if (!settings) return
+    if (storedTarget) {
+      setBaseTarget(storedTarget.target)
+    } else {
+      getTargetForDate(date, settings).then((t) => setBaseTarget(t))
+    }
+  }, [date, settings, storedTarget])
+
   const intakes = useLiveQuery(() => db.intakeEntries.where('date').equals(date).toArray(), [date])
   const burns = useLiveQuery(() => db.burnEntries.where('date').equals(date).toArray(), [date])
 
-  if (!settings || !intakes || !burns) return null
+  if (!settings || baseTarget == null || !intakes || !burns) return null
 
-  const dayOfWeek = getDayOfWeek(date)
-  const baseTarget = settings.dayOverrides[dayOfWeek] ?? settings.baselineCalories
   const burned = burns.reduce((sum, e) => sum + e.calories, 0)
   const target = baseTarget + burned
   const consumed = intakes.reduce((sum, e) => sum + e.calories, 0)

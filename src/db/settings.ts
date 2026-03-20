@@ -1,4 +1,5 @@
 import { db, type Settings, type DayOfWeek } from './index'
+import { updateTodayTarget } from './dailyTargets'
 
 const DEFAULT_SETTINGS: Settings = {
   id: 'user-settings',
@@ -20,11 +21,17 @@ export async function updateSettings(
   updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil'>>,
 ): Promise<void> {
   const current = await getOrCreateSettings()
-  await db.settings.put({
+  const updated = {
     ...current,
     ...updates,
     updatedAt: new Date().toISOString(),
-  })
+  }
+  await db.settings.put(updated)
+
+  // Keep today's daily target in sync when calorie settings change
+  if ('baselineCalories' in updates || 'dayOverrides' in updates) {
+    await updateTodayTarget(updated)
+  }
 }
 
 /** Remove overrides that equal the baseline (they're effectively "reset"). */

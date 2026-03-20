@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'preact/hooks'
+import { useState, useMemo, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
-import { formatDate, getDayOfWeek, todayString } from '../db/dates'
+import { formatDate, todayString } from '../db/dates'
+import { getTargetsForRange } from '../db/dailyTargets'
 import styles from './History.module.css'
 
 const MONTH_NAMES = [
@@ -53,8 +54,22 @@ export function History() {
     [startDate, endDate],
   )
 
+  // Backfill runs outside liveQuery (which is read-only).
+  // The liveQuery on dailyTargets detects when backfill writes complete and re-triggers.
+  const [targets, setTargets] = useState<Map<string, number> | null>(null)
+  const storedTargets = useLiveQuery(
+    () => days.length > 0
+      ? db.dailyTargets.where('date').between(days[days.length - 1], days[0], true, true).toArray()
+      : [],
+    [days],
+  )
+  useEffect(() => {
+    if (!settings || !storedTargets) return
+    getTargetsForRange(days, settings).then(setTargets)
+  }, [settings, storedTargets, days])
+
   const dayData = useMemo(() => {
-    if (!settings || !intakes || !burns) return null
+    if (!settings || !intakes || !burns || !targets) return null
 
     const intakeByDate = new Map<string, number>()
     for (const e of intakes) {
@@ -67,8 +82,7 @@ export function History() {
     }
 
     return days.map((dateStr) => {
-      const dow = getDayOfWeek(dateStr)
-      const baseTarget = settings.dayOverrides[dow] ?? settings.baselineCalories
+      const baseTarget = targets.get(dateStr) ?? settings.baselineCalories
       const burned = burnByDate.get(dateStr) || 0
       const target = baseTarget + burned
       const consumed = intakeByDate.get(dateStr) || 0
@@ -77,7 +91,7 @@ export function History() {
 
       return { dateStr, dayNum: d.getDate(), dayName: DAY_NAMES[d.getDay()], consumed, target, hasEntries }
     })
-  }, [settings, intakes, burns, days])
+  }, [settings, intakes, burns, targets, days])
 
   const goToPrevMonth = () => {
     if (month === 0) { setMonth(11); setYear(year - 1) }

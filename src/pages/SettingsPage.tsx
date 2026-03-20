@@ -181,14 +181,15 @@ function DataManagementSection() {
   const reminderEnabled = settings?.exportReminderEnabled ?? true
 
   const handleExport = useCallback(async () => {
-    const [settings, intakeEntries, burnEntries, customFoods] = await Promise.all([
+    const [settings, intakeEntries, burnEntries, customFoods, dailyTargets] = await Promise.all([
       db.settings.toArray(),
       db.intakeEntries.toArray(),
       db.burnEntries.toArray(),
       db.customFoods.toArray(),
+      db.dailyTargets.toArray(),
     ])
     const data = JSON.stringify(
-      { settings, intakeEntries, burnEntries, customFoods },
+      { settings, intakeEntries, burnEntries, customFoods, dailyTargets },
       null,
       2,
     )
@@ -224,19 +225,18 @@ function DataManagementSection() {
       const data = JSON.parse(importData)
       await db.transaction(
         'rw',
-        db.settings,
-        db.intakeEntries,
-        db.burnEntries,
-        db.customFoods,
+        [db.settings, db.intakeEntries, db.burnEntries, db.customFoods, db.dailyTargets],
         async () => {
           await db.settings.clear()
           await db.intakeEntries.clear()
           await db.burnEntries.clear()
           await db.customFoods.clear()
+          await db.dailyTargets.clear()
           if (data.settings?.length) await db.settings.bulkAdd(data.settings)
           if (data.intakeEntries?.length) await db.intakeEntries.bulkAdd(data.intakeEntries)
           if (data.burnEntries?.length) await db.burnEntries.bulkAdd(data.burnEntries)
           if (data.customFoods?.length) await db.customFoods.bulkAdd(data.customFoods)
+          if (data.dailyTargets?.length) await db.dailyTargets.bulkAdd(data.dailyTargets)
         },
       )
     } catch {
@@ -249,13 +249,12 @@ function DataManagementSection() {
   const confirmClear = useCallback(async () => {
     await db.transaction(
       'rw',
-      db.intakeEntries,
-      db.burnEntries,
-      db.customFoods,
+      [db.intakeEntries, db.burnEntries, db.customFoods, db.dailyTargets],
       async () => {
         await db.intakeEntries.clear()
         await db.burnEntries.clear()
         await db.customFoods.clear()
+        await db.dailyTargets.clear()
       },
     )
     setDialog(null)
