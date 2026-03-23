@@ -29,30 +29,20 @@ export async function updateTodayTarget(settings: Settings): Promise<void> {
 
 /**
  * Get the base target for a date. Returns the stored value if it exists.
- * Otherwise, backfills by inheriting from the nearest previous day's target,
- * falling back to current settings if no previous day exists.
+ * Otherwise, computes from current settings and stores it.
  */
 export async function getTargetForDate(date: string, settings: Settings): Promise<number> {
   const existing = await db.dailyTargets.get(date)
   if (existing) return existing.target
 
-  // Find the nearest previous day that has a target
-  const prev = await db.dailyTargets
-    .where('date')
-    .below(date)
-    .reverse()
-    .first()
-
-  const target = prev ? prev.target : targetFromSettings(date, settings)
-
-  // Backfill so we don't re-compute next time
+  const target = targetFromSettings(date, settings)
   await db.dailyTargets.put({ date, target })
   return target
 }
 
 /**
  * Get targets for a range of dates (for History page).
- * Backfills any missing days lazily.
+ * Stores computed targets for missing days.
  */
 export async function getTargetsForRange(
   dates: string[],
@@ -61,7 +51,6 @@ export async function getTargetsForRange(
   const result = new Map<string, number>()
   if (dates.length === 0) return result
 
-  // Fetch all existing targets in the range
   const sorted = [...dates].sort()
   const existing = await db.dailyTargets
     .where('date')
@@ -70,37 +59,20 @@ export async function getTargetsForRange(
 
   const existingMap = new Map(existing.map((t) => [t.date, t.target]))
 
-  // For missing dates, find the nearest previous target (before the range)
-  let fallback: number | null = null
-  if ([...dates].some((d) => !existingMap.has(d))) {
-    const prev = await db.dailyTargets
-      .where('date')
-      .below(sorted[0])
-      .reverse()
-      .first()
-    fallback = prev ? prev.target : null
-  }
+  const toStore: { date: string; target: number }[] = []
 
-  // Process dates in chronological order so each missing day can inherit from the previous
-  const toBackfill: { date: string; target: number }[] = []
-  const chronological = [...dates].sort()
-
-  for (const date of chronological) {
+  for (const date of dates) {
     if (existingMap.has(date)) {
-      const target = existingMap.get(date)!
-      result.set(date, target)
-      fallback = target
+      result.set(date, existingMap.get(date)!)
     } else {
-      const target = fallback ?? targetFromSettings(date, settings)
+      const target = targetFromSettings(date, settings)
       result.set(date, target)
-      toBackfill.push({ date, target })
-      fallback = target
+      toStore.push({ date, target })
     }
   }
 
-  // Backfill missing days in one batch
-  if (toBackfill.length > 0) {
-    await db.dailyTargets.bulkPut(toBackfill)
+  if (toStore.length > 0) {
+    await db.dailyTargets.bulkPut(toStore)
   }
 
   return result

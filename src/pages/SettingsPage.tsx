@@ -10,6 +10,7 @@ import {
   DAYS,
   computeWeeklyAverage,
 } from '../db/settings'
+import { updateTodayTarget } from '../db/dailyTargets'
 import styles from './SettingsPage.module.css'
 
 export function SettingsPage() {
@@ -182,15 +183,16 @@ function DataManagementSection() {
   const reminderEnabled = settings?.exportReminderEnabled ?? true
 
   const handleExport = useCallback(async () => {
-    const [settings, intakeEntries, burnEntries, customFoods, dailyTargets] = await Promise.all([
+    const [settings, intakeEntries, burnEntries, customFoods, dailyTargets, barcodeCache] = await Promise.all([
       db.settings.toArray(),
       db.intakeEntries.toArray(),
       db.burnEntries.toArray(),
       db.customFoods.toArray(),
       db.dailyTargets.toArray(),
+      db.barcodeCache.toArray(),
     ])
     const data = JSON.stringify(
-      { settings, intakeEntries, burnEntries, customFoods, dailyTargets },
+      { settings, intakeEntries, burnEntries, customFoods, dailyTargets, barcodeCache },
       null,
       2,
     )
@@ -228,20 +230,25 @@ function DataManagementSection() {
       const data = JSON.parse(importData)
       await db.transaction(
         'rw',
-        [db.settings, db.intakeEntries, db.burnEntries, db.customFoods, db.dailyTargets],
+        [db.settings, db.intakeEntries, db.burnEntries, db.customFoods, db.dailyTargets, db.barcodeCache],
         async () => {
           await db.settings.clear()
           await db.intakeEntries.clear()
           await db.burnEntries.clear()
           await db.customFoods.clear()
           await db.dailyTargets.clear()
+          await db.barcodeCache.clear()
           if (data.settings?.length) await db.settings.bulkAdd(data.settings)
           if (data.intakeEntries?.length) await db.intakeEntries.bulkAdd(data.intakeEntries)
           if (data.burnEntries?.length) await db.burnEntries.bulkAdd(data.burnEntries)
           if (data.customFoods?.length) await db.customFoods.bulkAdd(data.customFoods)
           if (data.dailyTargets?.length) await db.dailyTargets.bulkAdd(data.dailyTargets)
+          if (data.barcodeCache?.length) await db.barcodeCache.bulkAdd(data.barcodeCache)
         },
       )
+      // Recompute today's target from the imported settings
+      const imported = await getOrCreateSettings()
+      await updateTodayTarget(imported)
     } catch {
       alert('Invalid backup file.')
     }
@@ -250,16 +257,18 @@ function DataManagementSection() {
   }, [importData])
 
   const confirmClear = useCallback(async () => {
-    await db.transaction(
-      'rw',
-      [db.intakeEntries, db.burnEntries, db.customFoods, db.dailyTargets],
-      async () => {
-        await db.intakeEntries.clear()
-        await db.burnEntries.clear()
-        await db.customFoods.clear()
-        await db.dailyTargets.clear()
-      },
-    )
+    try {
+      await db.settings.clear()
+      await db.intakeEntries.clear()
+      await db.burnEntries.clear()
+      await db.customFoods.clear()
+      await db.dailyTargets.clear()
+      await db.barcodeCache.clear()
+      await getOrCreateSettings()
+    } catch (e) {
+      console.error('Clear failed:', e)
+      alert('Failed to clear data. Check console.')
+    }
     setDialog(null)
   }, [])
 
@@ -319,8 +328,8 @@ function DataManagementSection() {
           <div class={styles.dialog} onClick={(e) => e.stopPropagation()}>
             <h3>Clear All Data</h3>
             <p>
-              This will delete all intake entries, burn entries, and custom foods. Settings
-              will be kept. This cannot be undone.
+              This will delete all data including entries, custom foods, and settings.
+              This cannot be undone.
             </p>
             <div class={styles.dialogActions}>
               <button class={styles.dialogCancel} onClick={() => setDialog(null)}>
