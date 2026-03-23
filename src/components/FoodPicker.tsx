@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'preact/hooks'
+import { useState, useMemo, useCallback, useRef } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { FoodSearch, type FoodSearchResult } from './FoodSearch'
@@ -22,6 +22,7 @@ interface FoodPickerProps {
   date?: string
   showSaveAsCustom?: boolean
   submitLabel?: string
+  showSaveAndAddNew?: boolean
 }
 
 interface RecentFood {
@@ -58,6 +59,7 @@ export function FoodPicker({
   date = '',
   showSaveAsCustom = false,
   submitLabel = 'Add',
+  showSaveAndAddNew = false,
 }: FoodPickerProps) {
   const [unit, setUnit] = useState('100g')
   const [customUnit, setCustomUnit] = useState('')
@@ -74,6 +76,7 @@ export function FoodPicker({
   const [fromSearch, setFromSearch] = useState(false)
   const [isLiquid, setIsLiquid] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   const customFoodCount = useLiveQuery(() => db.customFoods.filter((f) => !f.barcode).count())
 
@@ -197,18 +200,40 @@ export function FoodPicker({
     setUnit('100g')
   }, [])
 
+  const buildResult = useCallback((): FoodPickerResult => ({
+    name: name.trim() || `${total} kcal`,
+    calories: total,
+    unitCalories: cal,
+    quantity: computeDbQuantity(resolvedUnit, qty),
+    unit: resolvedUnit,
+    saveAsCustom,
+  }), [name, total, cal, qty, resolvedUnit, saveAsCustom])
+
+  const resetForm = useCallback(() => {
+    setUnit('100g')
+    setCustomUnit('')
+    setUnitCalories('')
+    setQuantity('100')
+    setName('')
+    setSaveAsCustom(false)
+    setPortions(null)
+    setFromSearch(false)
+    setIsLiquid(false)
+    setSearchQuery('')
+  }, [])
+
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return
-    onSelect({
-      name: name.trim() || `${total} kcal`,
-      calories: total,
-      unitCalories: cal,
-      quantity: computeDbQuantity(resolvedUnit, qty),
-      unit: resolvedUnit,
-      saveAsCustom,
-    })
+    onSelect(buildResult())
     onClose()
-  }, [canSubmit, name, total, cal, qty, resolvedUnit, saveAsCustom, onSelect, onClose])
+  }, [canSubmit, buildResult, onSelect, onClose])
+
+  const handleSaveAndAddNew = useCallback(() => {
+    if (!canSubmit) return
+    onSelect(buildResult())
+    resetForm()
+    bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [canSubmit, buildResult, onSelect, resetForm])
 
   return (
     <div class={styles.overlay}>
@@ -222,14 +247,14 @@ export function FoodPicker({
           <h1 class={styles.headerTitle}>Select Food</h1>
         </div>
 
-        <div class={styles.body}>
+        <div class={styles.body} ref={bodyRef}>
           {/* Search buttons */}
           {!fromSearch && (
             <div class={styles.section}>
               <div class={styles.sectionTitle}>Search</div>
               <div class={styles.searchButtons}>
                 <button class={styles.searchButton} onClick={() => setSearching(true)}>
-                  Food database
+                  Food
                 </button>
                 {(customFoodCount ?? 0) > 0 && (
                   <button class={styles.searchButton} onClick={() => setSearchingCustom(true)}>
@@ -400,8 +425,13 @@ export function FoodPicker({
             </div>
           )}
 
-          <button class={styles.submitButton} disabled={!canSubmit} onClick={handleSubmit}>
-            {submitLabel}
+          {showSaveAndAddNew && (
+            <button class={styles.submitButton} disabled={!canSubmit} onClick={handleSaveAndAddNew}>
+              Save and add new
+            </button>
+          )}
+          <button class={`${styles.submitButton} ${showSaveAndAddNew ? styles.submitButtonSecondary : ''}`} disabled={!canSubmit} onClick={handleSubmit}>
+            {showSaveAndAddNew ? 'Save and done' : submitLabel}
           </button>
         </div>
 

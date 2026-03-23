@@ -341,3 +341,13 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.submitButtonSecondary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.submitButtonSecondary:hover {
+  background: var(--color-primary-light, rgba(76, 175, 80, 0.1));
+}
