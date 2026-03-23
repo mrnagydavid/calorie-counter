@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { formatDate, todayString } from '../db/dates'
 import { getTargetsForRange } from '../db/dailyTargets'
+import { WeightChart } from '../components/WeightChart'
 import styles from './History.module.css'
 
 const MONTH_NAMES = [
@@ -19,14 +20,19 @@ function barColor(ratio: number): string {
   return 'var(--color-green)'
 }
 
+type HistoryTab = 'calories' | 'weight'
+
 export function History() {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
+  const [weightYear, setWeightYear] = useState(today.getFullYear())
+  const [tab, setTab] = useState<HistoryTab>('calories')
 
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
+  const isCurrentYear = weightYear === today.getFullYear()
 
-  // Build date range for the month
+  // Build date range for the month (calories view)
   const { startDate, endDate, days } = useMemo(() => {
     const lastDay = new Date(year, month + 1, 0).getDate()
     const todayStr = todayString()
@@ -93,6 +99,30 @@ export function History() {
     })
   }, [settings, intakes, burns, targets, days])
 
+  // Weight entries for the selected year (weight view)
+  const weightEntries = useLiveQuery(
+    () =>
+      db.weightEntries
+        .where('date')
+        .between(`${weightYear}-01-01`, `${weightYear}-12-31`, true, true)
+        .reverse()
+        .sortBy('date'),
+    [weightYear],
+  )
+
+  // Deduplicate weight entries: keep latest per day, sorted newest first
+  const weightList = useMemo(() => {
+    if (!weightEntries) return null
+    const byDate = new Map<string, { date: string; weight: number; createdAt: string }>()
+    for (const e of weightEntries) {
+      const existing = byDate.get(e.date)
+      if (!existing || e.createdAt > existing.createdAt) {
+        byDate.set(e.date, { date: e.date, weight: e.weight, createdAt: e.createdAt })
+      }
+    }
+    return Array.from(byDate.values()).sort((a, b) => b.date.localeCompare(a.date))
+  }, [weightEntries])
+
   const goToPrevMonth = () => {
     if (month === 0) { setMonth(11); setYear(year - 1) }
     else setMonth(month - 1)
@@ -104,7 +134,7 @@ export function History() {
     else setMonth(month + 1)
   }
 
-  if (!dayData) return null
+  if (tab === 'calories' && !dayData) return null
 
   return (
     <div class={styles.page}>
@@ -112,63 +142,133 @@ export function History() {
         <h1 class={styles.headerTitle}>History</h1>
       </div>
 
-      <div class={styles.monthNav}>
-        <button class={styles.monthArrow} onClick={goToPrevMonth}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <span class={styles.monthLabel}>{MONTH_NAMES[month]} {year}</span>
+      <div class={styles.tabs}>
         <button
-          class={`${styles.monthArrow} ${isCurrentMonth ? styles.disabled : ''}`}
-          onClick={goToNextMonth}
-          disabled={isCurrentMonth}
+          class={`${styles.tab} ${tab === 'calories' ? styles.tabActive : ''}`}
+          onClick={() => setTab('calories')}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 18l6-6-6-6" />
-          </svg>
+          Calories
+        </button>
+        <button
+          class={`${styles.tab} ${tab === 'weight' ? styles.tabActive : ''}`}
+          onClick={() => setTab('weight')}
+        >
+          Weight
         </button>
       </div>
 
-      <div class={styles.dayList}>
-        {dayData.map((day) => {
-          const ratio = day.target > 0 ? day.consumed / day.target : 0
-          const pct = Math.min(ratio * 100, 100)
-          const color = barColor(ratio)
-
-          return (
-            <button
-              key={day.dateStr}
-              class={`${styles.dayRow} ${!day.hasEntries ? styles.dayRowEmpty : ''}`}
-              onClick={() => route(`/?date=${day.dateStr}`)}
-            >
-              <div class={styles.dayInfo}>
-                <span class={styles.dayName}>{day.dayName}</span>
-                <span class={styles.dayNum}>{day.dayNum}</span>
-              </div>
-              <div class={styles.dayMiddle}>
-                {day.hasEntries ? (
-                  <>
-                    <div class={styles.dayCalories}>
-                      {day.consumed} <span class={styles.daySeparator}>/</span> {day.target}
-                    </div>
-                    <div class={styles.miniBarTrack}>
-                      <div
-                        class={styles.miniBarFill}
-                        style={{ width: `${pct}%`, backgroundColor: color }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div class={styles.dayCalories}>
-                    <span class={styles.dash}>—</span>
-                  </div>
-                )}
-              </div>
+      {tab === 'calories' ? (
+        <>
+          <div class={styles.monthNav}>
+            <button class={styles.monthArrow} onClick={goToPrevMonth}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
             </button>
-          )
-        })}
-      </div>
+            <span class={styles.monthLabel}>{MONTH_NAMES[month]} {year}</span>
+            <button
+              class={`${styles.monthArrow} ${isCurrentMonth ? styles.disabled : ''}`}
+              onClick={goToNextMonth}
+              disabled={isCurrentMonth}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+
+          <div class={styles.dayList}>
+            {dayData!.map((day) => {
+              const ratio = day.target > 0 ? day.consumed / day.target : 0
+              const pct = Math.min(ratio * 100, 100)
+              const color = barColor(ratio)
+
+              return (
+                <button
+                  key={day.dateStr}
+                  class={`${styles.dayRow} ${!day.hasEntries ? styles.dayRowEmpty : ''}`}
+                  onClick={() => route(`/?date=${day.dateStr}`)}
+                >
+                  <div class={styles.dayInfo}>
+                    <span class={styles.dayName}>{day.dayName}</span>
+                    <span class={styles.dayNum}>{day.dayNum}</span>
+                  </div>
+                  <div class={styles.dayMiddle}>
+                    {day.hasEntries ? (
+                      <>
+                        <div class={styles.dayCalories}>
+                          {day.consumed} <span class={styles.daySeparator}>/</span> {day.target}
+                        </div>
+                        <div class={styles.miniBarTrack}>
+                          <div
+                            class={styles.miniBarFill}
+                            style={{ width: `${pct}%`, backgroundColor: color }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div class={styles.dayCalories}>
+                        <span class={styles.dash}>—</span>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div class={styles.monthNav}>
+            <button class={styles.monthArrow} onClick={() => setWeightYear(weightYear - 1)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <span class={styles.monthLabel}>{weightYear}</span>
+            <button
+              class={`${styles.monthArrow} ${isCurrentYear ? styles.disabled : ''}`}
+              onClick={() => !isCurrentYear && setWeightYear(weightYear + 1)}
+              disabled={isCurrentYear}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+
+          <WeightChart year={weightYear} />
+
+          {weightList && weightList.length > 0 && (
+            <div class={styles.dayList}>
+              {weightList.map((entry) => {
+                const d = new Date(+entry.date.slice(0, 4), +entry.date.slice(5, 7) - 1, +entry.date.slice(8, 10))
+                const dayName = DAY_NAMES[d.getDay()]
+                const dayNum = d.getDate()
+                const monthName = MONTH_NAMES[d.getMonth()].slice(0, 3)
+
+                return (
+                  <button
+                    key={entry.date}
+                    class={styles.dayRow}
+                    onClick={() => route(`/?date=${entry.date}`)}
+                  >
+                    <div class={styles.dayInfo}>
+                      <span class={styles.dayName}>{dayName}</span>
+                      <span class={styles.dayNum}>{dayNum}</span>
+                    </div>
+                    <div class={styles.dayMiddle}>
+                      <div class={styles.dayCalories}>
+                        <span class={styles.weightMonth}>{monthName}</span> {entry.weight} kg
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

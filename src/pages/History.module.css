@@ -51,6 +51,36 @@
   font-weight: 600;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  margin-bottom: 8px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border-radius: calc(var(--radius-md) - 2px);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab:hover:not(.tabActive) {
+  color: var(--color-text);
+}
+
+.tabActive {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
 /* Day list */
 .dayList {
   display: flex;
@@ -114,6 +144,11 @@
 
 .dash {
   color: var(--color-text-secondary);
+}
+
+.weightMonth {
+  color: var(--color-text-secondary);
+  margin-right: 4px;
 }
 
 /* Mini progress bar */

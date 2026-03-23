@@ -21,6 +21,9 @@ export function Fab({ date, remaining, onScanBarcode }: FabProps) {
       {open && <div class={styles.backdrop} onClick={() => setOpen(false)} />}
       {open && (
         <div class={styles.menu}>
+          <button class={styles.menuItem} onClick={() => go(`/add-weight/${date}`)}>
+            Log Weight
+          </button>
           <button class={styles.menuItem} onClick={() => go('/recipe-calculator')}>
             Recipe Calculator
           </button>

@@ -54,6 +54,13 @@ export interface DailyTarget {
   target: number // base calorie target for the day (before burns)
 }
 
+export interface WeightEntry {
+  id: string
+  date: string // YYYY-MM-DD
+  weight: number // in kg
+  createdAt: string // ISO timestamp
+}
+
 export interface BarcodeCacheEntry {
   barcode: string
   name: string
@@ -73,6 +80,7 @@ export const db = new Dexie('CalorieCounterDB') as Dexie & {
   customFoods: EntityTable<CustomFood, 'id'>
   dailyTargets: EntityTable<DailyTarget, 'date'>
   barcodeCache: EntityTable<BarcodeCacheEntry, 'barcode'>
+  weightEntries: EntityTable<WeightEntry, 'id'>
 }
 
 db.version(1).stores({
@@ -88,4 +96,8 @@ db.version(2).stores({
 
 db.version(3).stores({
   dailyTargets: 'date',
+})
+
+db.version(4).stores({
+  weightEntries: 'id, date, createdAt',
 })

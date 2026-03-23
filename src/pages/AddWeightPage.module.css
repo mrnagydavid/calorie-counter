@@ -1,0 +1,139 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.backButton:hover {
+  background: var(--color-bg-secondary);
+}
+
+.backButton svg {
+  width: 22px;
+  height: 22px;
+}
+
+.headerTitle {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recentList {
+  max-height: 156px;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+}
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+  width: 100%;
+  text-align: left;
+}
+
+.recentItem:last-child {
+  border-bottom: none;
+}
+
+.recentItem:hover {
+  background: var(--color-border);
+}
+
+.recentDate {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.recentWeight {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
+.fieldLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weightInput {
+  width: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: right;
+  background: var(--color-bg-secondary);
+}
+
+.weightInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.unit {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+}
+
+.submitButton {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.submitButton:hover {
+  background: var(--color-primary-dark);
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

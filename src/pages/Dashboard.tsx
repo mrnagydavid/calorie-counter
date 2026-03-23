@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useMemo } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
@@ -51,6 +51,18 @@ export function Dashboard() {
   const intakes = useLiveQuery(() => db.intakeEntries.where('date').equals(date).toArray(), [date])
   const burns = useLiveQuery(() => db.burnEntries.where('date').equals(date).toArray(), [date])
 
+  // Weight entry for this date (latest if multiple)
+  const weightEntries = useLiveQuery(
+    () => db.weightEntries.where('date').equals(date).toArray(),
+    [date],
+  )
+  const weightEntry = useMemo(() => {
+    if (!weightEntries || weightEntries.length === 0) return null
+    return weightEntries.reduce((latest, e) =>
+      e.createdAt > latest.createdAt ? e : latest
+    )
+  }, [weightEntries])
+
   if (!settings || baseTarget == null || !intakes || !burns) return null
 
   const burned = burns.reduce((sum, e) => sum + e.calories, 0)
@@ -64,7 +76,7 @@ export function Dashboard() {
       <ExportReminderBanner settings={settings} />
       <DateNav date={date} onDateChange={setDate} />
       <CalorieBudgetBar consumed={consumed} target={target} />
-      <EntryList intakes={intakes} burns={burns} />
+      <EntryList intakes={intakes} burns={burns} weightEntry={weightEntry} />
       <Fab date={date} remaining={remaining} onScanBarcode={() => setScanning(true)} />
       {scanning && (
         <BarcodeScanner date={date} onClose={() => setScanning(false)} />

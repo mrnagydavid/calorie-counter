@@ -7,6 +7,7 @@ import { AddIntakePage } from './pages/AddIntakePage'
 import { AddBurnPage } from './pages/AddBurnPage'
 import { MealPlanner } from './pages/MealPlanner'
 import { RecipeCalculator } from './pages/RecipeCalculator'
+import { AddWeightPage } from './pages/AddWeightPage'
 import styles from './app.module.css'
 
 export function App() {
@@ -21,6 +22,7 @@ export function App() {
           <Route path="/add-burn/:date" component={AddBurnPage} />
           <Route path="/planner/:date" component={MealPlanner} />
           <Route path="/recipe-calculator" component={RecipeCalculator} />
+          <Route path="/add-weight/:date" component={AddWeightPage} />
         </Router>
       </main>
       <BottomNav />

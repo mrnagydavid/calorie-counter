@@ -1,0 +1,28 @@
+.container {
+  padding: 8px 0;
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+}
+
+.axisLabel {
+  font-size: 11px;
+  fill: var(--color-text-secondary);
+}
+
+.valueLabel {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--color-text);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+}

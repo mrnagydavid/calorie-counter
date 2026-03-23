@@ -1,11 +1,12 @@
-import { useState } from 'preact/hooks'
-import { db, type IntakeEntry, type BurnEntry } from '../db/index'
+import { useState, useCallback } from 'preact/hooks'
+import { db, type IntakeEntry, type BurnEntry, type WeightEntry } from '../db/index'
 import { NumericInput } from './NumericInput'
 import styles from './EntryList.module.css'
 
 interface EntryListProps {
   intakes: IntakeEntry[]
   burns: BurnEntry[]
+  weightEntry?: WeightEntry | null
 }
 
 type MergedEntry =
@@ -21,7 +22,9 @@ function isWeightUnit(unit: string): boolean {
   return unit === '100g' || unit === '100ml'
 }
 
-export function EntryList({ intakes, burns }: EntryListProps) {
+const WEIGHT_ID = '__weight__'
+
+export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -33,6 +36,24 @@ export function EntryList({ intakes, burns }: EntryListProps) {
   const [editCalories, setEditCalories] = useState('')
   // Unit calories (editable for all intake types)
   const [editUnitCal, setEditUnitCal] = useState('')
+  // Weight edit
+  const [editWeight, setEditWeight] = useState('')
+
+  const handleWeightDelete = useCallback(async () => {
+    if (!weightEntry) return
+    await db.weightEntries.delete(weightEntry.id)
+    setExpandedId(null)
+    setEditingId(null)
+  }, [weightEntry])
+
+  const handleWeightSave = useCallback(async () => {
+    if (!weightEntry) return
+    const w = parseFloat(editWeight)
+    if (!w || w <= 0) return
+    await db.weightEntries.update(weightEntry.id, { weight: w })
+    setEditingId(null)
+    setExpandedId(null)
+  }, [weightEntry, editWeight])
 
   const merged: MergedEntry[] = [
     ...intakes.map((e) => ({ type: 'intake' as const, data: e })),
@@ -95,7 +116,7 @@ export function EntryList({ intakes, burns }: EntryListProps) {
     setEditingId(null)
   }
 
-  if (merged.length === 0) {
+  if (merged.length === 0 && !weightEntry) {
     return <div class={styles.empty}>No entries yet. Tap + to add one.</div>
   }
 
@@ -117,6 +138,53 @@ export function EntryList({ intakes, burns }: EntryListProps) {
     <div>
       <div class={styles.sectionTitle}>Entries</div>
       <div class={styles.list}>
+        {weightEntry && (
+          <div>
+            <div class={styles.entry} onClick={() => handleTap(WEIGHT_ID)}>
+              <div class={styles.info}>
+                <div class={styles.name}>Weight</div>
+              </div>
+              <div class={styles.calories}>
+                {weightEntry.weight} kg
+              </div>
+            </div>
+
+            {expandedId === WEIGHT_ID && editingId !== WEIGHT_ID && (
+              <div class={styles.actions}>
+                <button class={styles.deleteButton} onClick={handleWeightDelete}>
+                  Delete
+                </button>
+                <button class={styles.editButton} onClick={() => {
+                  setEditWeight(String(weightEntry.weight))
+                  setEditingId(WEIGHT_ID)
+                }}>
+                  Edit
+                </button>
+              </div>
+            )}
+
+            {editingId === WEIGHT_ID && (
+              <div class={styles.editForm}>
+                <div class={styles.editRow}>
+                  <label class={styles.editLabel}>Weight</label>
+                  <NumericInput
+                    inputMode="decimal"
+                    class={styles.editInput}
+                    value={editWeight}
+                    onInput={(e) => setEditWeight((e.target as HTMLInputElement).value)}
+                    min="0"
+                    step="0.1"
+                  />
+                  <span class={styles.editUnit}>kg</span>
+                </div>
+                <div class={styles.editActions}>
+                  <button class={styles.cancelButton} onClick={cancelEdit}>Cancel</button>
+                  <button class={styles.saveButton} onClick={handleWeightSave}>Save</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {merged.map((entry) => {
           const isExpanded = expandedId === entry.data.id
           const isEditing = editingId === entry.data.id
