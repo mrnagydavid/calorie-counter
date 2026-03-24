@@ -95,20 +95,14 @@ export function WeightChart({ year }: WeightChartProps) {
   const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
   const daysInYear = isLeapYear ? 366 : 365
 
-  // Position on X axis proportional to day-of-year (used for month labels and data points)
   const toX = (doy: number) => {
     return CHART_PADDING_LEFT + (doy / (daysInYear - 1)) * plotWidth
-  }
-  // For single data points, center the dot
-  const dataX = (i: number) => {
-    if (dataPoints.length === 1) return CHART_PADDING_LEFT + plotWidth / 2
-    return toX(dataPoints[i].dayOfYear)
   }
   const toY = (w: number) => {
     return CHART_PADDING_TOP + (1 - (w - yMin) / yRange) * plotHeight
   }
 
-  const pathPoints = dataPoints.map((_, i) => `${dataX(i)},${toY(dataPoints[i].weight)}`).join(' ')
+  const pathPoints = dataPoints.map((d) => `${toX(d.dayOfYear)},${toY(d.weight)}`).join(' ')
 
   // Month label positions (1st of each month)
   const monthPositions = MONTH_LABELS.map((label, i) => {
@@ -177,7 +171,7 @@ export function WeightChart({ year }: WeightChartProps) {
         {dataPoints.map((d, i) => (
           <g key={d.date}>
             <circle
-              cx={dataX(i)}
+              cx={toX(d.dayOfYear)}
               cy={toY(d.weight)}
               r={DOT_RADIUS}
               fill="var(--color-primary)"
@@ -185,7 +179,7 @@ export function WeightChart({ year }: WeightChartProps) {
             {/* Value label on first and last points */}
             {(dataPoints.length === 1 || i === 0 || i === dataPoints.length - 1) && (
               <text
-                x={dataX(i)}
+                x={toX(d.dayOfYear)}
                 y={toY(d.weight) - 10}
                 text-anchor="middle"
                 class={styles.valueLabel}
