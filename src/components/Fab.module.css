@@ -34,7 +34,10 @@
   right: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
   z-index: 90;
 }
 
@@ -42,13 +45,15 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  padding: 12px 20px;
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.menuItem:last-child {
+  border-bottom: none;
 }
 
 .menuIcon {
@@ -64,5 +69,6 @@
 .backdrop {
   position: fixed;
   inset: 0;
+  background: rgba(0, 0, 0, 0.3);
   z-index: 80;
 }
