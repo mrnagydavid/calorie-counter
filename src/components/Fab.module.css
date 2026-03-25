@@ -51,6 +51,12 @@
   white-space: nowrap;
 }
 
+.menuIcon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .menuItem:hover {
   background: var(--color-bg-secondary);
 }
