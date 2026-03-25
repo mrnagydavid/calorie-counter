@@ -81,6 +81,7 @@ export function FoodSearch({ onSelect, onClose, initialQuery = '' }: FoodSearchP
   const [query, setQuery] = useState(initialQuery)
   const [foods, setFoods] = useState<FoodItem[] | null>(null)
   const [results, setResults] = useState<FoodItem[]>([])
+  const [googleOpened, setGoogleOpened] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { loadFoods().then(setFoods) }, [])
@@ -126,6 +127,28 @@ export function FoodSearch({ onSelect, onClose, initialQuery = '' }: FoodSearchP
         <div class={styles.hint}>
           Data from USDA FoodData Central, a scientific database — some names may look unusual.
         </div>
+
+        {query.trim().length >= 2 && (
+          <div class={styles.googleRow}>
+            <button
+              class={styles.googleButton}
+              onClick={() => {
+                window.open(
+                  `https://www.google.com/search?q=calories+in+${encodeURIComponent(query.trim())}+per+100g`,
+                  '_blank',
+                )
+                setGoogleOpened(true)
+              }}
+            >
+              🔍 Search on Google
+            </button>
+            {googleOpened && (
+              <button class={styles.backButton} onClick={onClose}>
+                ← Back to Add intake
+              </button>
+            )}
+          </div>
+        )}
 
         {!foods && <div class={styles.loading}>Loading food database...</div>}
 
