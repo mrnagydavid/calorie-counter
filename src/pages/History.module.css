@@ -133,13 +133,25 @@
 }
 
 .dayCalories {
-  font-size: 14px;
+  display: flex;
+  align-items: baseline;
+  font-size: 13px;
   color: var(--color-text);
+}
+
+.calorieNum {
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
 }
 
 .daySeparator {
   color: var(--color-text-secondary);
-  margin: 0 2px;
+  margin: 0 4px;
+}
+
+.burnedInfo {
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .dash {
@@ -154,7 +166,6 @@
 /* Mini progress bar */
 .miniBarTrack {
   height: 4px;
-  background: var(--color-border);
   border-radius: 2px;
   overflow: hidden;
 }

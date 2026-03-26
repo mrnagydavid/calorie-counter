@@ -14,10 +14,28 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+// Interpolate between two hex colors. t=0 returns c1, t=1 returns c2.
+function lerpColor(c1: string, c2: string, t: number): string {
+  const p = (hex: string) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+  const [r1, g1, b1] = p(c1)
+  const [r2, g2, b2] = p(c2)
+  const r = Math.round(r1 + (r2 - r1) * t)
+  const g = Math.round(g1 + (g2 - g1) * t)
+  const b = Math.round(b1 + (b2 - b1) * t)
+  return `rgb(${r},${g},${b})`
+}
+
+const GREY = '#6b7280'
+const GREEN = '#10b981'
+const YELLOW = '#f59e0b'
+const RED = '#ef4444'
+
 function barColor(ratio: number): string {
-  if (ratio >= 1) return 'var(--color-red)'
-  if (ratio >= 0.75) return 'var(--color-yellow)'
-  return 'var(--color-green)'
+  if (ratio <= 0.5) return GREY
+  if (ratio <= 0.95) return lerpColor(GREY, GREEN, (ratio - 0.5) / 0.45)
+  if (ratio <= 1.05) return GREEN
+  if (ratio <= 1.4) return lerpColor(GREEN, YELLOW, (ratio - 1.05) / 0.35)
+  return RED
 }
 
 type HistoryTab = 'calories' | 'weight'
@@ -95,7 +113,7 @@ export function History() {
       const hasEntries = intakeByDate.has(dateStr) || burnByDate.has(dateStr)
       const d = new Date(+dateStr.slice(0, 4), +dateStr.slice(5, 7) - 1, +dateStr.slice(8, 10))
 
-      return { dateStr, dayNum: d.getDate(), dayName: DAY_NAMES[d.getDay()], consumed, target, hasEntries }
+      return { dateStr, dayNum: d.getDate(), dayName: DAY_NAMES[d.getDay()], consumed, target, burned, hasEntries }
     })
   }, [settings, intakes, burns, targets, days])
 
@@ -178,43 +196,54 @@ export function History() {
           </div>
 
           <div class={styles.dayList}>
-            {dayData!.map((day) => {
-              const ratio = day.target > 0 ? day.consumed / day.target : 0
-              const pct = Math.min(ratio * 100, 100)
-              const color = barColor(ratio)
-
-              return (
-                <button
-                  key={day.dateStr}
-                  class={`${styles.dayRow} ${!day.hasEntries ? styles.dayRowEmpty : ''}`}
-                  onClick={() => route(`/?date=${day.dateStr}`)}
-                >
-                  <div class={styles.dayInfo}>
-                    <span class={styles.dayName}>{day.dayName}</span>
-                    <span class={styles.dayNum}>{day.dayNum}</span>
-                  </div>
-                  <div class={styles.dayMiddle}>
-                    {day.hasEntries ? (
-                      <>
-                        <div class={styles.dayCalories}>
-                          {day.consumed} <span class={styles.daySeparator}>/</span> {day.target}
-                        </div>
-                        <div class={styles.miniBarTrack}>
-                          <div
-                            class={styles.miniBarFill}
-                            style={{ width: `${pct}%`, backgroundColor: color }}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <div class={styles.dayCalories}>
-                        <span class={styles.dash}>—</span>
-                      </div>
-                    )}
-                  </div>
-                </button>
+            {(() => {
+              const barScale = Math.max(
+                ...dayData!.map((d) => d.consumed),
+                ...dayData!.map((d) => d.target),
+                1,
               )
-            })}
+              return dayData!.map((day) => {
+                const ratio = day.target > 0 ? day.consumed / day.target : 0
+                const pct = barScale > 0 ? Math.min((day.consumed / barScale) * 100, 100) : 0
+                const color = barColor(ratio)
+
+                return (
+                  <button
+                    key={day.dateStr}
+                    class={`${styles.dayRow} ${!day.hasEntries ? styles.dayRowEmpty : ''}`}
+                    onClick={() => route(`/?date=${day.dateStr}`)}
+                  >
+                    <div class={styles.dayInfo}>
+                      <span class={styles.dayName}>{day.dayName}</span>
+                      <span class={styles.dayNum}>{day.dayNum}</span>
+                    </div>
+                    <div class={styles.dayMiddle}>
+                      {day.hasEntries ? (
+                        <>
+                          <div class={styles.dayCalories}>
+                            <span class={styles.calorieNum}>🍔 {day.consumed}</span>
+                            <span class={styles.calorieNum}>✅ {day.target}</span>
+                            {day.burned > 0 && (
+                              <span class={styles.burnedInfo}>(🏃 {day.burned})</span>
+                            )}
+                          </div>
+                          <div class={styles.miniBarTrack}>
+                            <div
+                              class={styles.miniBarFill}
+                              style={{ width: `${pct}%`, backgroundColor: color }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div class={styles.dayCalories}>
+                          <span class={styles.dash}>—</span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )
+              })
+            })()}
           </div>
         </>
       ) : (
