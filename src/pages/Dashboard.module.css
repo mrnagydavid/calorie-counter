@@ -3,3 +3,39 @@
   flex-direction: column;
   gap: 20px;
 }
+
+/* On-track stats */
+.statsCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.statsTitle {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+
+.statsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statsLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.statsGreen {
+  color: var(--color-green);
+}
+
+.statsRed {
+  color: var(--color-red);
+}

@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
-import { todayString } from '../db/dates'
-import { ensureTodayTarget, getTargetForDate } from '../db/dailyTargets'
+import { todayString, formatDate } from '../db/dates'
+import { ensureTodayTarget, getTargetForDate, getTargetsForRange } from '../db/dailyTargets'
 import { DateNav } from '../components/DateNav'
 import { CalorieBudgetBar } from '../components/CalorieBudgetBar'
 import { EntryList } from '../components/EntryList'
@@ -63,6 +63,72 @@ export function Dashboard() {
     )
   }, [weightEntries])
 
+  // --- On-track stats (last 7d / 30d) ---
+  const past30Days = useMemo(() => {
+    const days: string[] = []
+    for (let i = 1; i <= 30; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      days.push(formatDate(d))
+    }
+    return days
+  }, [])
+
+  const statsStart = past30Days[past30Days.length - 1]
+  const statsEnd = past30Days[0]
+
+  const statsIntakes = useLiveQuery(
+    () => db.intakeEntries.where('date').between(statsStart, statsEnd, true, true).toArray(),
+    [statsStart, statsEnd],
+  )
+  const statsBurns = useLiveQuery(
+    () => db.burnEntries.where('date').between(statsStart, statsEnd, true, true).toArray(),
+    [statsStart, statsEnd],
+  )
+
+  const [statsTargets, setStatsTargets] = useState<Map<string, number> | null>(null)
+
+  useEffect(() => {
+    if (!settings) return
+    getTargetsForRange(past30Days, settings).then(setStatsTargets)
+  }, [settings, past30Days])
+
+  const stats = useMemo(() => {
+    if (!statsIntakes || !statsBurns || !statsTargets || !settings) return null
+
+    const intakeByDate = new Map<string, number>()
+    for (const e of statsIntakes) {
+      intakeByDate.set(e.date, (intakeByDate.get(e.date) || 0) + e.calories)
+    }
+    const burnByDate = new Map<string, number>()
+    for (const e of statsBurns) {
+      burnByDate.set(e.date, (burnByDate.get(e.date) || 0) + e.calories)
+    }
+
+    // Only count days with at least one entry
+    const datesWithEntries = new Set([...intakeByDate.keys(), ...burnByDate.keys()])
+
+    const computeAvg = (days: string[]) => {
+      let sum = 0
+      let count = 0
+      for (const d of days) {
+        if (!datesWithEntries.has(d)) continue
+        const baseTarget = statsTargets.get(d) ?? settings.baselineCalories
+        const burned = burnByDate.get(d) || 0
+        const target = baseTarget + burned
+        const consumed = intakeByDate.get(d) || 0
+        sum += consumed - target
+        count++
+      }
+      return count > 0 ? Math.round(sum / count) : null
+    }
+
+    return {
+      avg7: computeAvg(past30Days.slice(0, 7)),
+      avg30: computeAvg(past30Days),
+    }
+  }, [statsIntakes, statsBurns, statsTargets, settings, past30Days])
+
   if (!settings || baseTarget == null || !intakes || !burns) return null
 
   const burned = burns.reduce((sum, e) => sum + e.calories, 0)
@@ -75,6 +141,29 @@ export function Dashboard() {
       <InstallBanner />
       <ExportReminderBanner settings={settings} />
       <DateNav date={date} onDateChange={setDate} />
+
+      {date === todayString() && stats && (stats.avg7 != null || stats.avg30 != null) && (
+        <div class={styles.statsCard}>
+          <div class={styles.statsTitle}>Average daily difference from goal</div>
+          {stats.avg7 != null && (
+            <div class={styles.statsRow}>
+              <span class={styles.statsLabel}>in the last 7 days</span>
+              <span class={`${styles.statsLabel} ${stats.avg7 <= 0 ? styles.statsGreen : styles.statsRed}`}>
+                {stats.avg7 > 0 ? '+' : ''}{stats.avg7}
+              </span>
+            </div>
+          )}
+          {stats.avg30 != null && (
+            <div class={styles.statsRow}>
+              <span class={styles.statsLabel}>in the last 30 days</span>
+              <span class={`${styles.statsLabel} ${stats.avg30 <= 0 ? styles.statsGreen : styles.statsRed}`}>
+                {stats.avg30 > 0 ? '+' : ''}{stats.avg30}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       <CalorieBudgetBar consumed={consumed} target={target} />
       <EntryList intakes={intakes} burns={burns} weightEntry={weightEntry} />
       <Fab date={date} remaining={remaining} onScanBarcode={() => setScanning(true)} />
