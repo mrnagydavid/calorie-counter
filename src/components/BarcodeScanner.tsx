@@ -406,14 +406,14 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
             <div class={styles.total}>Total: {total} kcal</div>
 
             <div class={styles.actions}>
-              <button class={styles.primaryButton} onClick={() => addEntry(false)}>
-                {onAddEntry ? 'Add' : 'Add & Close'}
-              </button>
               {!onAddEntry && (
-                <button class={styles.secondaryButton} onClick={() => addEntry(true)}>
+                <button class={styles.primaryButton} onClick={() => addEntry(true)}>
                   Add & Scan Next
                 </button>
               )}
+              <button class={onAddEntry ? styles.primaryButton : styles.secondaryButton} onClick={() => addEntry(false)}>
+                {onAddEntry ? 'Add' : 'Add & Close'}
+              </button>
             </div>
           </>
         )}
