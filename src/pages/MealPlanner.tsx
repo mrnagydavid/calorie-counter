@@ -6,6 +6,7 @@ import { getOrCreateSettings } from '../db/settings'
 import { todayString } from '../db/dates'
 import { getTargetForDate } from '../db/dailyTargets'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
+import { FeatureIntro } from '../components/FeatureIntro'
 import { NumericInput } from '../components/NumericInput'
 import styles from './MealPlanner.module.css'
 
@@ -115,6 +116,11 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         </button>
         <h1 class={styles.headerTitle}>Plan a Meal</h1>
       </div>
+
+      <FeatureIntro featureKey="meal-planner" version={1}>
+        Plan your meal before eating. Add items to see how they fit in your
+        remaining calorie budget, then log them all at once.
+      </FeatureIntro>
 
       {/* Budget */}
       <div class={styles.section}>

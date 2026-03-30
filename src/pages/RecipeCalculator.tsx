@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { db } from '../db/index'
 import { todayString } from '../db/dates'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
+import { FeatureIntro } from '../components/FeatureIntro'
 import { NumericInput } from '../components/NumericInput'
 import styles from './RecipeCalculator.module.css'
 
@@ -85,6 +86,12 @@ export function RecipeCalculator() {
         </button>
         <h1 class={styles.headerTitle}>Recipe Calculator</h1>
       </div>
+
+      <FeatureIntro featureKey="recipe-calculator" version={1}>
+        Calculate the calorie density of home-cooked recipes. Add ingredients,
+        enter the final weight, and it calculates the calories per 100g. Save
+        the result as a custom food you can log anytime.
+      </FeatureIntro>
 
       {/* Recipe name */}
       <div class={styles.section}>
