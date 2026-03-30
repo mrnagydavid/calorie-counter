@@ -20,7 +20,9 @@ const CHART_PADDING_TOP = 24
 const CHART_PADDING_BOTTOM = 30
 const CHART_PADDING_LEFT = 44
 const CHART_PADDING_RIGHT = 12
-const DOT_RADIUS = 3.5
+const DOT_RADIUS_SMALL = 2
+const DOT_RADIUS_BIG = 4
+const MIN_Y_RANGE = 4 // kg, prevents exaggerated drops with few points
 
 function dayOfYear(dateStr: string): number {
   const d = new Date(+dateStr.slice(0, 4), +dateStr.slice(5, 7) - 1, +dateStr.slice(8, 10))
@@ -78,10 +80,26 @@ export function WeightChart({ year }: WeightChartProps) {
   const minWeight = Math.min(...weights)
   const maxWeight = Math.max(...weights)
 
-  const range = Math.max(maxWeight - minWeight, 1)
-  const yMin = Math.floor((minWeight - range * 0.2) * 10) / 10
-  const yMax = Math.ceil((maxWeight + range * 0.2) * 10) / 10
+  const rawRange = Math.max(maxWeight - minWeight, 1)
+  const range = Math.max(rawRange, MIN_Y_RANGE)
+  const mid = (minWeight + maxWeight) / 2
+  const yMin = Math.floor((mid - range / 2 - range * 0.1) * 10) / 10
+  const yMax = Math.ceil((mid + range / 2 + range * 0.1) * 10) / 10
   const yRange = yMax - yMin
+
+  // Find monthly lows: for each month, the point with the lowest weight
+  const monthlyLows = new Set<string>()
+  const byMonth = new Map<number, DataPoint>()
+  for (const d of dataPoints) {
+    const month = +d.date.slice(5, 7)
+    const existing = byMonth.get(month)
+    if (!existing || d.weight < existing.weight) {
+      byMonth.set(month, d)
+    }
+  }
+  for (const d of byMonth.values()) {
+    monthlyLows.add(d.date)
+  }
 
   const gridStep = yRange <= 2 ? 0.5 : yRange <= 5 ? 1 : 2
   const gridLines: number[] = []
@@ -168,26 +186,31 @@ export function WeightChart({ year }: WeightChartProps) {
         )}
 
         {/* Data points */}
-        {dataPoints.map((d, i) => (
-          <g key={d.date}>
-            <circle
-              cx={toX(d.dayOfYear)}
-              cy={toY(d.weight)}
-              r={DOT_RADIUS}
-              fill="var(--color-primary)"
-            />
-            {/* Value label on first and last points */}
-            {(dataPoints.length === 1 || i === 0 || i === dataPoints.length - 1) && (
-              <text
-                x={toX(d.dayOfYear)}
-                y={toY(d.weight) - 10}
-                text-anchor="middle"
-                class={styles.valueLabel}
-              >
-                {d.weight % 1 === 0 ? d.weight : d.weight.toFixed(1)}
-              </text>
-            )}
-          </g>
+        {dataPoints.map((d) => {
+          const isMonthlyLow = monthlyLows.has(d.date)
+          return (
+            <g key={d.date}>
+              <circle
+                cx={toX(d.dayOfYear)}
+                cy={toY(d.weight)}
+                r={isMonthlyLow ? DOT_RADIUS_BIG : DOT_RADIUS_SMALL}
+                fill="var(--color-primary)"
+              />
+            </g>
+          )
+        })}
+
+        {/* Labels below monthly low dots */}
+        {dataPoints.filter((d) => monthlyLows.has(d.date)).map((d) => (
+          <text
+            key={`label-${d.date}`}
+            x={toX(d.dayOfYear)}
+            y={toY(d.weight) + 16}
+            text-anchor="middle"
+            class={styles.valueLabel}
+          >
+            {d.weight % 1 === 0 ? d.weight : d.weight.toFixed(1)}
+          </text>
         ))}
       </svg>
     </div>

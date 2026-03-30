@@ -288,7 +288,7 @@ export function History() {
                     </div>
                     <div class={styles.dayMiddle}>
                       <div class={styles.dayCalories}>
-                        <span class={styles.weightMonth}>{monthName}</span> {entry.weight} kg
+                        {entry.weight} kg
                       </div>
                     </div>
                   </button>
