@@ -77,6 +77,13 @@ export function FoodPicker({
   const [isLiquid, setIsLiquid] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const bodyRef = useRef<HTMLDivElement>(null)
+  const unitRef = useRef<HTMLDivElement>(null)
+
+  const scrollToUnit = useCallback(() => {
+    requestAnimationFrame(() => {
+      unitRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [])
 
   const customFoodCount = useLiveQuery(() => db.customFoods.filter((f) => !f.barcode).count())
 
@@ -134,7 +141,8 @@ export function FoodPicker({
     setIsLiquid(liquid)
     setSearchQuery(query)
     setSearching(false)
-  }, [])
+    scrollToUnit()
+  }, [scrollToUnit])
 
   const handleCustomFoodResult = useCallback((result: CustomFoodResult) => {
     setName(result.name)
@@ -150,7 +158,8 @@ export function FoodPicker({
       setQuantity('1')
     }
     setSearchingCustom(false)
-  }, [])
+    scrollToUnit()
+  }, [scrollToUnit])
 
   const handleScannedEntry = useCallback((entry: ScannedEntry) => {
     setName(entry.name)
@@ -168,7 +177,8 @@ export function FoodPicker({
       setQuantity(String(entry.quantity))
     }
     setScanning(false)
-  }, [])
+    scrollToUnit()
+  }, [scrollToUnit])
 
   const handlePortionTap = useCallback((portion: { desc: string; g: number }) => {
     setQuantity(String(portion.g))
@@ -187,7 +197,8 @@ export function FoodPicker({
     } else {
       setQuantity(String(item.quantity))
     }
-  }, [])
+    scrollToUnit()
+  }, [scrollToUnit])
 
   const clearSearch = useCallback(() => {
     setPortions(null)
@@ -289,7 +300,7 @@ export function FoodPicker({
 
           {/* Search info banner / Unit selector */}
           {fromSearch ? (
-            <div>
+            <div ref={unitRef}>
               <div class={styles.searchInfo}>
                 <span class={styles.searchInfoText} onClick={() => setSearching(true)}>
                   {name} · {unitCalories} kcal/{unit === '100ml' ? '100ml' : '100g'}
@@ -303,7 +314,7 @@ export function FoodPicker({
               )}
             </div>
           ) : (
-            <div class={styles.section}>
+            <div class={styles.section} ref={unitRef}>
               <div class={styles.fieldLabel}>Unit</div>
               <div class={styles.unitOptions}>
                 {UNITS.map((opt) => (
