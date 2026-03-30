@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'preact/hooks'
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
@@ -7,8 +7,15 @@ import { todayString } from '../db/dates'
 import { getTargetForDate } from '../db/dailyTargets'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { FeatureIntro } from '../components/FeatureIntro'
+import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
+import { useDraftCache } from '../hooks/useDraftCache'
 import styles from './MealPlanner.module.css'
+
+interface MealPlannerDraft {
+  items: DraftItem[]
+  budgetOverride: string | null
+}
 
 interface MealPlannerProps {
   date?: string
@@ -37,6 +44,25 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
 
   // Budget
   const [budgetOverride, setBudgetOverride] = useState<string | null>(null)
+
+  // Draft cache
+  const draft = useDraftCache<MealPlannerDraft>(
+    'meal-planner',
+    (d) => d.items.length === 0,
+  )
+
+  const budgetRef = useRef(budgetOverride)
+  budgetRef.current = budgetOverride
+
+  // Save on item add/remove (discrete events)
+  useEffect(() => {
+    draft.save({ items, budgetOverride: budgetRef.current })
+  }, [items])
+
+  // Save on budget input blur
+  const saveDraft = useCallback(() => {
+    draft.save({ items, budgetOverride })
+  }, [items, budgetOverride, draft])
 
   useEffect(() => { getOrCreateSettings() }, [])
 
@@ -103,13 +129,14 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         createdAt: now,
       }),
     ))
+    draft.clear()
     route(`/?date=${date}`)
   }
 
   return (
     <div class={styles.page}>
       <div class={styles.header}>
-        <button class={styles.backButton} onClick={() => route(`/?date=${date}`)}>
+        <button class={styles.backButton} onClick={() => { draft.clear(); route(`/?date=${date}`) }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
@@ -122,6 +149,17 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         remaining calorie budget, then log them all at once.
       </FeatureIntro>
 
+      {draft.pending && (
+        <DraftRestoreBanner
+          onRestore={() => {
+            const data = draft.restore()
+            setItems(data.items)
+            setBudgetOverride(data.budgetOverride)
+          }}
+          onDiscard={() => draft.discard()}
+        />
+      )}
+
       {/* Budget */}
       <div class={styles.section}>
         <div class={styles.budgetRow}>
@@ -131,6 +169,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
               class={styles.budgetInput}
               value={budgetOverride !== null ? budgetOverride : String(remaining)}
               onInput={(e) => setBudgetOverride((e.target as HTMLInputElement).value)}
+              onBlur={saveDraft}
             />
             <span class={styles.budgetUnit}>kcal</span>
           </div>
@@ -185,7 +224,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
 
       {/* Actions */}
       <div class={styles.actions}>
-        <button class={styles.dismissButton} onClick={() => route(`/?date=${date}`)}>
+        <button class={styles.dismissButton} onClick={() => { draft.clear(); route(`/?date=${date}`) }}>
           Dismiss
         </button>
         <button

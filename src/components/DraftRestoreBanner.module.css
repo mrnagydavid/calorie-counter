@@ -1,0 +1,46 @@
+.banner {
+  padding: 14px 16px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.restoreButton {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.restoreButton:active {
+  opacity: 0.8;
+}
+
+.discardButton {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  background: transparent;
+}
+
+.discardButton:active {
+  background: rgba(0, 0, 0, 0.05);
+}

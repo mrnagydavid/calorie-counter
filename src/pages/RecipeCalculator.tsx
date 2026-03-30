@@ -1,11 +1,19 @@
-import { useState, useCallback } from 'preact/hooks'
+import { useState, useCallback, useEffect, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { db } from '../db/index'
 import { todayString } from '../db/dates'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { FeatureIntro } from '../components/FeatureIntro'
+import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
+import { useDraftCache } from '../hooks/useDraftCache'
 import styles from './RecipeCalculator.module.css'
+
+interface RecipeCalculatorDraft {
+  recipeName: string
+  ingredients: RecipeIngredient[]
+  totalWeight: string
+}
 
 interface RecipeIngredient {
   id: string
@@ -23,6 +31,27 @@ export function RecipeCalculator() {
   const [totalWeight, setTotalWeight] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
+
+  // Draft cache
+  const draft = useDraftCache<RecipeCalculatorDraft>(
+    'recipe-calculator',
+    (d) => d.ingredients.length === 0 && d.recipeName.trim() === '',
+  )
+
+  const recipeNameRef = useRef(recipeName)
+  recipeNameRef.current = recipeName
+  const totalWeightRef = useRef(totalWeight)
+  totalWeightRef.current = totalWeight
+
+  // Save on ingredient add/remove (discrete events)
+  useEffect(() => {
+    draft.save({ recipeName: recipeNameRef.current, ingredients, totalWeight: totalWeightRef.current })
+  }, [ingredients])
+
+  // Save on input blur
+  const saveDraft = useCallback(() => {
+    draft.save({ recipeName, ingredients, totalWeight })
+  }, [recipeName, ingredients, totalWeight, draft])
 
   // Derived
   const totalKcal = ingredients.reduce((sum, i) => sum + i.totalKcal, 0)
@@ -73,13 +102,14 @@ export function RecipeCalculator() {
       lastUsed: new Date().toISOString(),
     })
 
+    draft.clear()
     route('/')
   }
 
   return (
     <div class={styles.page}>
       <div class={styles.header}>
-        <button class={styles.backButton} onClick={() => route('/')}>
+        <button class={styles.backButton} onClick={() => { draft.clear(); route('/') }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
@@ -93,6 +123,18 @@ export function RecipeCalculator() {
         the result as a custom food you can log anytime.
       </FeatureIntro>
 
+      {draft.pending && (
+        <DraftRestoreBanner
+          onRestore={() => {
+            const data = draft.restore()
+            setRecipeName(data.recipeName)
+            setIngredients(data.ingredients)
+            setTotalWeight(data.totalWeight)
+          }}
+          onDiscard={() => draft.discard()}
+        />
+      )}
+
       {/* Recipe name */}
       <div class={styles.section}>
         <div class={styles.sectionTitle}>Recipe name</div>
@@ -101,6 +143,7 @@ export function RecipeCalculator() {
           class={styles.nameInput}
           value={recipeName}
           onInput={(e) => setRecipeName((e.target as HTMLInputElement).value)}
+          onBlur={saveDraft}
           placeholder="e.g. Lasagne"
         />
         <div class={styles.nameHint}>
@@ -157,6 +200,7 @@ export function RecipeCalculator() {
               class={styles.weightInput}
               value={totalWeight}
               onInput={(e) => setTotalWeight((e.target as HTMLInputElement).value)}
+              onBlur={saveDraft}
               placeholder="0"
               min="0"
             />
@@ -175,7 +219,7 @@ export function RecipeCalculator() {
 
       {/* Actions */}
       <div class={styles.actions}>
-        <button class={styles.dismissButton} onClick={() => route('/')}>
+        <button class={styles.dismissButton} onClick={() => { draft.clear(); route('/') }}>
           Dismiss
         </button>
         <button
