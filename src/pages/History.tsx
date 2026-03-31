@@ -222,7 +222,7 @@ export function History() {
                         <>
                           <div class={styles.dayCalories}>
                             <span class={styles.calorieNum}>🍔 {day.consumed}</span>
-                            <span class={styles.calorieNum}>✅ {day.target}</span>
+                            <span class={styles.calorieNum}>{ratio < 0.95 ? '☑️' : ratio <= 1.05 ? '✅' : '⚠️'} {day.target}</span>
                             {day.burned > 0 && (
                               <span class={styles.burnedInfo}>(🏃 {day.burned})</span>
                             )}
