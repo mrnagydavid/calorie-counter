@@ -51,6 +51,8 @@ const unitLabels: Record<string, string> = {
   serving: 'per serving',
   '100g': 'per 100g',
   '100ml': 'per 100ml',
+  total: 'total',
+  piece: 'per piece',
 }
 
 function variantLabel(v: CalorieVariant): string {
@@ -146,6 +148,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
         })
         return
       }
+      const isCustomCountBased = customFood.unit === 'serving' || customFood.unit === 'total' || customFood.unit === 'piece'
       setState({
         step: 'found',
         barcode,
@@ -158,8 +161,11 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
         },
       })
       setSelectedIdx(0)
-      setAmount('100')
-      setServingQty(1)
+      if (isCustomCountBased) {
+        setServingQty(1)
+      } else {
+        setAmount('100')
+      }
       return
     }
 
@@ -228,9 +234,9 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
   }, [])
 
   const selectedVariant = state.step === 'found' ? state.product.variants[selectedIdx] : null
-  const isServing = selectedVariant?.unit === 'serving'
+  const isCountBased = selectedVariant?.unit === 'serving' || selectedVariant?.unit === 'total' || selectedVariant?.unit === 'piece'
   const total = selectedVariant
-    ? isServing
+    ? isCountBased
       ? Math.round(selectedVariant.kcal * servingQty)
       : Math.round(selectedVariant.kcal * (parseFloat(amount) || 0) / 100)
     : 0
@@ -240,7 +246,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
     const { product, barcode } = state
 
     const unitCalories = selectedVariant.kcal
-    const quantity = isServing ? servingQty : (parseFloat(amount) || 0) / 100
+    const quantity = isCountBased ? servingQty : (parseFloat(amount) || 0) / 100
     const entryName = [product.name, product.brand].filter(Boolean).join(' — ')
 
     if (onAddEntry) {
@@ -269,7 +275,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
     } else {
       onClose()
     }
-  }, [state, selectedVariant, isServing, servingQty, amount, total, date, onClose, startCamera])
+  }, [state, selectedVariant, isCountBased, servingQty, amount, total, date, onClose, startCamera])
 
   const handleNotFoundAdd = useCallback(() => {
     if (state.step !== 'not-found' && state.step !== 'lookup-error') return
@@ -341,7 +347,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                       checked={selectedIdx === i}
                       onChange={() => {
                         setSelectedIdx(i)
-                        if (v.unit === 'serving') setServingQty(1)
+                        if (v.unit === 'serving' || v.unit === 'total' || v.unit === 'piece') setServingQty(1)
                         else setAmount('100')
                       }}
                     />
@@ -361,7 +367,8 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
               </div>
             )}
 
-            {isServing ? (
+            {isCountBased ? (
+              selectedVariant?.unit === 'total' ? null : (
               <div>
                 <div class={styles.fieldLabel}>Quantity</div>
                 <div class={styles.stepper}>
@@ -379,12 +386,13 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                     +
                   </button>
                 </div>
-                {selectedVariant?.servingSize && (
+                {selectedVariant?.unit === 'serving' && selectedVariant?.servingSize && (
                   <div class={styles.servingNote}>
                     1 serving = {selectedVariant.servingSize}
                   </div>
                 )}
               </div>
+              )
             ) : (
               <div>
                 <div class={styles.fieldLabel}>Amount</div>

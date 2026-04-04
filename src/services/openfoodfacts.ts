@@ -2,7 +2,7 @@ import { db } from '../db/index'
 
 export interface CalorieVariant {
   kcal: number
-  unit: 'serving' | '100g' | '100ml'
+  unit: 'serving' | '100g' | '100ml' | 'total' | 'piece'
   servingSize?: string // e.g. "32g"
 }
 

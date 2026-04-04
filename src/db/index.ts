@@ -67,7 +67,7 @@ export interface BarcodeCacheEntry {
   brand?: string
   variants: Array<{
     kcal: number
-    unit: 'serving' | '100g' | '100ml'
+    unit: 'serving' | '100g' | '100ml' | 'total' | 'piece'
     servingSize?: string
   }>
   cachedAt: string
