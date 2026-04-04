@@ -434,12 +434,13 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                     Serving size: {selectedVariant.servingSize}
                   </div>
                 )}
-                {state.customFoodId && (
-                  <button class={styles.editLink} onClick={handleEditCustomFood}>
-                    Edit
-                  </button>
-                )}
               </div>
+            )}
+
+            {state.customFoodId && (
+              <button class={styles.editLink} onClick={handleEditCustomFood}>
+                ✏️ Edit food definition
+              </button>
             )}
 
             {isCountBased ? (
