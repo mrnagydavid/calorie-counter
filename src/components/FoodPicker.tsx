@@ -4,20 +4,13 @@ import { db } from '../db/index'
 import { FoodSearch, type FoodSearchResult } from './FoodSearch'
 import { CustomFoodSearch, type CustomFoodResult } from './CustomFoodSearch'
 import { BarcodeScanner, type ScannedEntry } from './BarcodeScanner'
-import { NumericInput } from './NumericInput'
+import { FoodForm, type FoodFormResult } from './FoodForm'
 import styles from './FoodPicker.module.css'
 
-export interface FoodPickerResult {
-  name: string
-  calories: number
-  unitCalories: number
-  quantity: number
-  unit: string
-  saveAsCustom: boolean
-}
+export type { FoodFormResult as FoodPickerResult }
 
 interface FoodPickerProps {
-  onSelect: (result: FoodPickerResult) => void
+  onSelect: (result: FoodFormResult) => void
   onClose: () => void
   date?: string
   showSaveAsCustom?: boolean
@@ -32,25 +25,15 @@ interface RecentFood {
   unit: string
 }
 
-const UNITS = ['100g', '100ml', 'total', 'piece'] as const
-
-function quantityLabel(unit: string): string {
-  if (unit === '100g') return 'g'
-  if (unit === '100ml') return 'ml'
-  if (unit === 'piece') return 'piece(s)'
-  return unit
-}
-
-function computeTotal(unit: string, cal: number, qty: number): number {
-  if (unit === 'total') return cal
-  if (unit === '100g' || unit === '100ml') return Math.round(cal * qty / 100)
-  return Math.round(cal * qty)
-}
-
-function computeDbQuantity(unit: string, qty: number): number {
-  if (unit === 'total') return 1
-  if (unit === '100g' || unit === '100ml') return qty / 100
-  return qty
+interface FormFill {
+  name: string
+  unit: string
+  unitCalories: number
+  /** Display quantity (grams for 100g/100ml, count for others) */
+  quantity: number
+  portions?: { desc: string; g: number }[] | null
+  isLiquid?: boolean
+  searchQuery?: string
 }
 
 export function FoodPicker({
@@ -61,21 +44,15 @@ export function FoodPicker({
   submitLabel = 'Add',
   showSaveAndAddNew = false,
 }: FoodPickerProps) {
-  const [unit, setUnit] = useState('100g')
-  const [customUnit, setCustomUnit] = useState('')
-  const [unitCalories, setUnitCalories] = useState('')
-  const [quantity, setQuantity] = useState('100')
-  const [name, setName] = useState('')
-  const [saveAsCustom, setSaveAsCustom] = useState(false)
-
   const [searching, setSearching] = useState(false)
   const [searchingCustom, setSearchingCustom] = useState(false)
   const [scanning, setScanning] = useState(false)
 
-  const [portions, setPortions] = useState<{ desc: string; g: number }[] | null>(null)
-  const [fromSearch, setFromSearch] = useState(false)
-  const [isLiquid, setIsLiquid] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  // When a search/barcode/recent fills the form, we store the fill data
+  // and bump formKey to remount FoodForm with new initial values.
+  const [formFill, setFormFill] = useState<FormFill | null>(null)
+  const [formKey, setFormKey] = useState(0)
+
   const bodyRef = useRef<HTMLDivElement>(null)
   const unitRef = useRef<HTMLDivElement>(null)
 
@@ -109,142 +86,90 @@ export function FoodPicker({
     return result
   }, [allIntakes])
 
-  const cal = parseInt(unitCalories, 10) || 0
-  const qty = parseFloat(quantity) || 0
-  const resolvedUnit = unit === 'custom' ? (customUnit.trim() || 'portion') : unit
-  const total = computeTotal(resolvedUnit, cal, qty)
-  const isTotal = unit === 'total'
-  const showQuantity = !isTotal
-
-  const canSubmit = cal > 0 && (!saveAsCustom || name.trim().length > 0)
-
-  const handleUnitChange = useCallback((newUnit: string) => {
-    setUnit(newUnit)
-    if (newUnit === '100g' || newUnit === '100ml') {
-      setQuantity('100')
-    } else if (newUnit === 'total') {
-      setQuantity('1')
-    } else if (newUnit === 'piece' || newUnit === 'custom') {
-      setQuantity('1')
-    }
-  }, [])
+  const applyFill = useCallback((fill: FormFill) => {
+    setFormFill(fill)
+    setFormKey((k) => k + 1)
+    scrollToUnit()
+  }, [scrollToUnit])
 
   const handleSearchResult = useCallback((result: FoodSearchResult, query: string) => {
     const liquid = /beverages/i.test(result.cat) ||
       /\b(juice|milk|drink|smoothie|water|broth|soup|soda|tea|coffee|wine|beer)\b/i.test(result.name)
-    setName(result.name)
-    setUnitCalories(String(result.kcal))
-    setUnit('100g')
-    setQuantity('100')
-    setPortions(result.portions || null)
-    setFromSearch(true)
-    setIsLiquid(liquid)
-    setSearchQuery(query)
+    applyFill({
+      name: result.name,
+      unitCalories: result.kcal,
+      unit: '100g',
+      quantity: 100,
+      portions: result.portions || null,
+      isLiquid: liquid,
+      searchQuery: query,
+    })
     setSearching(false)
-    scrollToUnit()
-  }, [scrollToUnit])
+  }, [applyFill])
 
   const handleCustomFoodResult = useCallback((result: CustomFoodResult) => {
-    setName(result.name)
-    setUnitCalories(String(result.caloriesPerUnit))
-    setUnit(result.unit)
-    setPortions(null)
-    setFromSearch(true)
-    setIsLiquid(false)
-    setSearchQuery('')
-    if (result.unit === '100g' || result.unit === '100ml') {
-      setQuantity('100')
-    } else {
-      setQuantity('1')
-    }
+    const qty = (result.unit === '100g' || result.unit === '100ml') ? 100 : 1
+    applyFill({
+      name: result.name,
+      unitCalories: result.caloriesPerUnit,
+      unit: result.unit,
+      quantity: qty,
+    })
     setSearchingCustom(false)
-    scrollToUnit()
-  }, [scrollToUnit])
+  }, [applyFill])
 
   const handleScannedEntry = useCallback((entry: ScannedEntry) => {
-    setName(entry.name)
-    setUnitCalories(String(entry.unitCalories))
-    setUnit(entry.unit)
-    setPortions(entry.portions || null)
-    setFromSearch(true)
-    setIsLiquid(false)
-    setSearchQuery('')
+    let qty: number
     if (entry.unit === '100g' || entry.unit === '100ml') {
-      setQuantity(String(Math.round(entry.quantity * 100)))
+      qty = Math.round(entry.quantity * 100)
     } else if (entry.unit === 'total') {
-      setQuantity('1')
+      qty = 1
     } else {
-      setQuantity(String(entry.quantity))
+      qty = entry.quantity
     }
+    applyFill({
+      name: entry.name,
+      unitCalories: entry.unitCalories,
+      unit: entry.unit,
+      quantity: qty,
+      portions: entry.portions || null,
+    })
     setScanning(false)
-    scrollToUnit()
-  }, [scrollToUnit])
-
-  const handlePortionTap = useCallback((portion: { desc: string; g: number }) => {
-    setQuantity(String(portion.g))
-  }, [])
+  }, [applyFill])
 
   const handleRecentTap = useCallback((item: RecentFood) => {
-    setName(item.name)
-    setUnitCalories(String(item.unitCalories))
-    setUnit(item.unit)
-    setPortions(null)
-    setFromSearch(false)
+    let qty: number
     if (item.unit === '100g' || item.unit === '100ml') {
-      setQuantity(String(Math.round(item.quantity * 100)))
+      qty = Math.round(item.quantity * 100)
     } else if (item.unit === 'total') {
-      setQuantity('1')
+      qty = 1
     } else {
-      setQuantity(String(item.quantity))
+      qty = item.quantity
     }
-    scrollToUnit()
-  }, [scrollToUnit])
+    applyFill({
+      name: item.name,
+      unitCalories: item.unitCalories,
+      unit: item.unit,
+      quantity: qty,
+    })
+  }, [applyFill])
 
   const clearSearch = useCallback(() => {
-    setPortions(null)
-    setFromSearch(false)
-    setIsLiquid(false)
-    setSearchQuery('')
-    setName('')
-    setUnitCalories('')
-    setQuantity('100')
-    setUnit('100g')
+    setFormFill(null)
+    setFormKey((k) => k + 1)
   }, [])
 
-  const buildResult = useCallback((): FoodPickerResult => ({
-    name: name.trim() || `${total} kcal`,
-    calories: total,
-    unitCalories: cal,
-    quantity: computeDbQuantity(resolvedUnit, qty),
-    unit: resolvedUnit,
-    saveAsCustom,
-  }), [name, total, cal, qty, resolvedUnit, saveAsCustom])
-
-  const resetForm = useCallback(() => {
-    setUnit('100g')
-    setCustomUnit('')
-    setUnitCalories('')
-    setQuantity('100')
-    setName('')
-    setSaveAsCustom(false)
-    setPortions(null)
-    setFromSearch(false)
-    setIsLiquid(false)
-    setSearchQuery('')
-  }, [])
-
-  const handleSubmit = useCallback(() => {
-    if (!canSubmit) return
-    onSelect(buildResult())
+  const handleSubmit = useCallback((result: FoodFormResult) => {
+    onSelect(result)
     onClose()
-  }, [canSubmit, buildResult, onSelect, onClose])
+  }, [onSelect, onClose])
 
-  const handleSaveAndAddNew = useCallback(() => {
-    if (!canSubmit) return
-    onSelect(buildResult())
-    resetForm()
+  const handleSaveAndAddNew = useCallback((result: FoodFormResult) => {
+    onSelect(result)
+    setFormFill(null)
+    setFormKey((k) => k + 1)
     bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [canSubmit, buildResult, onSelect, resetForm])
+  }, [onSelect])
 
   return (
     <div class={styles.overlay}>
@@ -260,7 +185,7 @@ export function FoodPicker({
 
         <div class={styles.body} ref={bodyRef}>
           {/* Search buttons */}
-          {!fromSearch && (
+          {!formFill && (
             <div class={styles.section}>
               <div class={styles.sectionTitle}>Search</div>
               <div class={styles.searchButtons}>
@@ -298,156 +223,52 @@ export function FoodPicker({
             </div>
           )}
 
-          {/* Search info banner / Unit selector */}
-          {fromSearch ? (
+          {/* Search info banner (when filled from search) */}
+          {formFill && (
             <div ref={unitRef}>
               <div class={styles.searchInfo}>
-                <span class={styles.searchInfoText} onClick={() => setSearching(true)}>
-                  {name} · {unitCalories} kcal/{unit === '100ml' ? '100ml' : '100g'}
+                <span
+                  class={styles.searchInfoText}
+                  onClick={() => formFill.searchQuery !== undefined && setSearching(true)}
+                >
+                  {formFill.name} · {formFill.unitCalories} kcal/{formFill.unit === '100ml' ? '100ml' : '100g'}
                 </span>
                 <button class={styles.searchInfoClear} onClick={clearSearch}>Clear</button>
               </div>
-              {isLiquid && (
+              {formFill.isLiquid && (
                 <div class={styles.liquidNote}>
                   Nutritional data is per 100g by weight. For liquids, use a kitchen scale for best accuracy.
                 </div>
               )}
             </div>
-          ) : (
-            <div class={styles.section} ref={unitRef}>
-              <div class={styles.fieldLabel}>Unit</div>
-              <div class={styles.unitOptions}>
-                {UNITS.map((opt) => (
-                  <label key={opt} class={styles.unitOption}>
-                    <input
-                      type="radio"
-                      name="fp-unit"
-                      value={opt}
-                      checked={unit === opt}
-                      onChange={() => handleUnitChange(opt)}
-                    />
-                    {opt}
-                  </label>
-                ))}
-                <label class={styles.unitOption}>
-                  <input
-                    type="radio"
-                    name="fp-unit"
-                    value="custom"
-                    checked={unit === 'custom'}
-                    onChange={() => handleUnitChange('custom')}
-                  />
-                  <input
-                    type="text"
-                    class={styles.unitCustomInput}
-                    value={customUnit}
-                    onInput={(e) => {
-                      setCustomUnit((e.target as HTMLInputElement).value)
-                      setUnit('custom')
-                    }}
-                    onFocus={() => setUnit('custom')}
-                    placeholder="custom"
-                  />
-                </label>
-              </div>
-            </div>
           )}
 
-          {/* Calories per unit */}
-          {!fromSearch && (
-            <div class={styles.section}>
-              <div class={styles.fieldLabel}>
-                {isTotal ? 'Total calories' : `Calories per ${resolvedUnit}`}
-              </div>
-              <div class={styles.inputRow}>
-                <NumericInput
-                  inputMode="numeric"
-                  class={styles.calorieInput}
-                  value={unitCalories}
-                  onInput={(e) => setUnitCalories((e.target as HTMLInputElement).value)}
-                  placeholder="0"
-                  min="0"
-                />
-                <span class={styles.unit}>kcal</span>
-              </div>
-            </div>
-          )}
-
-          {/* Portion quick-picks */}
-          {showQuantity && portions && portions.length > 0 && (unit === '100g' || unit === '100ml') && (
-            <div class={styles.section}>
-              <div class={styles.fieldLabel}>Quick portion</div>
-              <div class={styles.portionChips}>
-                {portions.map((p, i) => (
-                  <button
-                    key={i}
-                    class={styles.portionChip}
-                    onClick={() => handlePortionTap(p)}
-                  >
-                    {p.desc} <span class={styles.portionChipG}>{p.g}{unit === '100ml' ? 'ml' : 'g'}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quantity */}
-          {showQuantity && (
-            <div class={styles.section}>
-              <div class={styles.fieldLabel}>Quantity ({quantityLabel(resolvedUnit)})</div>
-              <div class={styles.inputRow}>
-                <NumericInput
-                  class={styles.calorieInput}
-                  value={quantity}
-                  onInput={(e) => setQuantity((e.target as HTMLInputElement).value)}
-                  min="0"
-                />
-                <span class={styles.unit}>{quantityLabel(resolvedUnit)}</span>
-              </div>
-            </div>
-          )}
-
-          <div class={styles.total}>Total: {total} kcal</div>
-
-          {/* Name */}
-          <div class={styles.section}>
-            <div class={styles.fieldLabel}>
-              Name {showSaveAsCustom && saveAsCustom ? <span class={styles.required}>*</span> : '(optional)'}
-            </div>
-            <input
-              type="text"
-              class={styles.textInput}
-              value={name}
-              onInput={(e) => setName((e.target as HTMLInputElement).value)}
-              placeholder="e.g. Chicken salad"
-            />
-          </div>
-
-          {/* Save as custom food */}
-          {showSaveAsCustom && (
-            <div class={styles.checkboxRow}>
-              <input
-                type="checkbox"
-                id="fpSaveCustom"
-                checked={saveAsCustom}
-                onChange={(e) => setSaveAsCustom((e.target as HTMLInputElement).checked)}
-              />
-              <label for="fpSaveCustom">Save as custom food</label>
-            </div>
-          )}
-
-          {showSaveAndAddNew && (
-            <button class={styles.submitButton} disabled={!canSubmit} onClick={handleSaveAndAddNew}>
-              Save and add new
-            </button>
-          )}
-          <button class={`${styles.submitButton} ${showSaveAndAddNew ? styles.submitButtonSecondary : ''}`} disabled={!canSubmit} onClick={handleSubmit}>
-            {showSaveAndAddNew ? 'Save and done' : submitLabel}
-          </button>
+          {/* The form */}
+          <FoodForm
+            key={formKey}
+            initial={formFill ? {
+              name: formFill.name,
+              unit: formFill.unit,
+              unitCalories: formFill.unitCalories,
+              quantity: formFill.quantity,
+            } : undefined}
+            hideUnitAndCalories={!!formFill}
+            portions={formFill?.portions ?? null}
+            showSaveAsCustom={showSaveAsCustom}
+            submitLabel={submitLabel}
+            showSaveAndAddNew={showSaveAndAddNew}
+            onSubmit={handleSubmit}
+            onSaveAndAddNew={showSaveAndAddNew ? handleSaveAndAddNew : undefined}
+            scrollAnchorRef={formFill ? undefined : unitRef}
+          />
         </div>
 
         {searching && (
-          <FoodSearch onSelect={handleSearchResult} onClose={() => setSearching(false)} initialQuery={searchQuery} />
+          <FoodSearch
+            onSelect={handleSearchResult}
+            onClose={() => setSearching(false)}
+            initialQuery={formFill?.searchQuery ?? ''}
+          />
         )}
 
         {searchingCustom && (

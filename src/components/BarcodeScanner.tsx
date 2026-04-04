@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { db } from '../db/index'
 import { lookupBarcode, type CalorieVariant, type OFFProduct, type LookupError } from '../services/openfoodfacts'
+import { FoodForm, type FoodFormResult } from './FoodForm'
 import styles from './BarcodeScanner.module.css'
 import { NumericInput } from './NumericInput'
 
@@ -42,7 +43,8 @@ interface BarcodeScannerProps {
 
 type State =
   | { step: 'scanning'; loading: boolean }
-  | { step: 'found'; product: OFFProduct; barcode: string }
+  | { step: 'found'; product: OFFProduct; barcode: string; customFoodId?: string }
+  | { step: 'editing'; product: OFFProduct; barcode: string; customFoodId: string }
   | { step: 'not-found'; barcode: string }
   | { step: 'lookup-error'; barcode: string; error: LookupError }
   | { step: 'error'; message: string }
@@ -159,6 +161,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
             unit: customFood.unit as CalorieVariant['unit'],
           }],
         },
+        customFoodId: customFood.id,
       })
       setSelectedIdx(0)
       if (isCustomCountBased) {
@@ -295,15 +298,72 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
     onClose()
   }, [onClose, stopCamera])
 
+  const handleEditCustomFood = useCallback(() => {
+    if (state.step !== 'found' || !state.customFoodId) return
+    setState({
+      step: 'editing',
+      product: state.product,
+      barcode: state.barcode,
+      customFoodId: state.customFoodId,
+    })
+  }, [state])
+
+  const handleEditSave = useCallback(async (result: FoodFormResult) => {
+    if (state.step !== 'editing') return
+    const { barcode, customFoodId } = state
+
+    // Update the custom food in DB
+    await db.customFoods.update(customFoodId, {
+      name: result.name,
+      caloriesPerUnit: result.unitCalories,
+      unit: result.unit,
+      lastUsed: new Date().toISOString(),
+    })
+
+    // Return to found screen with updated data
+    const isUpdatedCountBased = result.unit === 'serving' || result.unit === 'total' || result.unit === 'piece'
+    setState({
+      step: 'found',
+      barcode,
+      product: {
+        name: result.name,
+        variants: [{
+          kcal: result.unitCalories,
+          unit: result.unit as CalorieVariant['unit'],
+        }],
+      },
+      customFoodId,
+    })
+    setSelectedIdx(0)
+    if (isUpdatedCountBased) {
+      setServingQty(1)
+    } else {
+      setAmount('100')
+    }
+  }, [state])
+
+  const handleEditCancel = useCallback(() => {
+    if (state.step !== 'editing') return
+    // Return to found screen with original data
+    setState({
+      step: 'found',
+      barcode: state.barcode,
+      product: state.product,
+      customFoodId: state.customFoodId,
+    })
+  }, [state])
+
   return (
     <div class={styles.overlay}>
       <div class={styles.header}>
-        <button class={styles.backButton} onClick={handleClose}>
+        <button class={styles.backButton} onClick={state.step === 'editing' ? handleEditCancel : handleClose}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <h1 class={styles.headerTitle}>Scan Barcode</h1>
+        <h1 class={styles.headerTitle}>
+          {state.step === 'editing' ? 'Edit Food' : 'Scan Barcode'}
+        </h1>
       </div>
 
       <div class={styles.body}>
@@ -363,6 +423,11 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                   <div class={styles.servingNote}>
                     Serving size: {selectedVariant.servingSize}
                   </div>
+                )}
+                {state.customFoodId && (
+                  <button class={styles.editLink} onClick={handleEditCustomFood}>
+                    Edit
+                  </button>
                 )}
               </div>
             )}
@@ -424,6 +489,20 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
               </button>
             </div>
           </>
+        )}
+
+        {state.step === 'editing' && (
+          <FoodForm
+            initial={{
+              name: state.product.name,
+              unit: state.product.variants[0].unit,
+              unitCalories: state.product.variants[0].kcal,
+            }}
+            showNameField
+            nameRequired
+            submitLabel="Save"
+            onSubmit={handleEditSave}
+          />
         )}
 
         {state.step === 'error' && (
