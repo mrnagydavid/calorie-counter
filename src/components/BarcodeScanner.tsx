@@ -244,7 +244,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
       : Math.round(selectedVariant.kcal * (parseFloat(amount) || 0) / 100)
     : 0
 
-  const addEntry = useCallback(async (thenScanAgain: boolean) => {
+  const saveEntry = useCallback(async () => {
     if (state.step !== 'found' || !selectedVariant) return
     const { product, barcode } = state
 
@@ -268,17 +268,27 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
         createdAt: new Date().toISOString(),
       })
     }
+  }, [state, selectedVariant, isCountBased, servingQty, amount, total, date, onAddEntry])
 
-    if (thenScanAgain) {
-      setState({ step: 'scanning', loading: false })
-      setSelectedIdx(0)
-      setAmount('100')
-      setServingQty(1)
-      startCamera()
-    } else {
-      onClose()
-    }
-  }, [state, selectedVariant, isCountBased, servingQty, amount, total, date, onClose, startCamera])
+  const handleSaveAndScan = useCallback(async () => {
+    await saveEntry()
+    setState({ step: 'scanning', loading: false })
+    setSelectedIdx(0)
+    setAmount('100')
+    setServingQty(1)
+    startCamera()
+  }, [saveEntry, startCamera])
+
+  const handleSaveAndAddManually = useCallback(async () => {
+    await saveEntry()
+    onClose()
+    route(`/add-intake/${date}`)
+  }, [saveEntry, date, onClose])
+
+  const handleSaveAndClose = useCallback(async () => {
+    await saveEntry()
+    onClose()
+  }, [saveEntry, onClose])
 
   const handleNotFoundAdd = useCallback(() => {
     if (state.step !== 'not-found' && state.step !== 'lookup-error') return
@@ -479,14 +489,23 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
             <div class={styles.total}>Total: {total} kcal</div>
 
             <div class={styles.actions}>
-              {!onAddEntry && (
-                <button class={styles.primaryButton} onClick={() => addEntry(true)}>
-                  Add & Scan Next
+              {onAddEntry ? (
+                <button class={styles.primaryButton} onClick={handleSaveAndClose}>
+                  Add
                 </button>
+              ) : (
+                <>
+                  <button class={styles.primaryButton} onClick={handleSaveAndScan}>
+                    📷 Save & scan next
+                  </button>
+                  <button class={styles.primaryButton} onClick={handleSaveAndAddManually}>
+                    ➕ Save & add manually
+                  </button>
+                  <button class={styles.secondaryButton} onClick={handleSaveAndClose}>
+                    ✅ Save & close
+                  </button>
+                </>
               )}
-              <button class={onAddEntry ? styles.primaryButton : styles.secondaryButton} onClick={() => addEntry(false)}>
-                {onAddEntry ? 'Add' : 'Add & Close'}
-              </button>
             </div>
           </>
         )}
