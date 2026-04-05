@@ -205,7 +205,7 @@ export function FoodPicker({
           )}
 
           {/* Recents */}
-          {recents.length > 0 && (
+          {recents.length > 0 && !formFill && (
             <div class={styles.section}>
               <div class={styles.sectionTitle}>Recent</div>
               <div class={styles.recentList}>
