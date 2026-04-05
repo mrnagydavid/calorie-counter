@@ -10,6 +10,7 @@ import { FeatureIntro } from '../components/FeatureIntro'
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
 import { useDraftCache } from '../hooks/useDraftCache'
+import { barColor } from '../utils/barColor'
 import styles from './MealPlanner.module.css'
 
 interface MealPlannerDraft {
@@ -28,12 +29,6 @@ interface DraftItem {
   unitCalories: number
   quantity: number
   unit: string
-}
-
-function barColor(ratio: number): string {
-  if (ratio >= 1) return 'var(--color-red)'
-  if (ratio >= 0.75) return 'var(--color-yellow)'
-  return 'var(--color-green)'
 }
 
 export function MealPlanner({ date: dateProp }: MealPlannerProps) {
