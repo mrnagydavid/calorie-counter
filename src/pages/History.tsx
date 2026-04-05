@@ -34,7 +34,8 @@ function barColor(ratio: number): string {
   if (ratio <= 0.5) return GREY
   if (ratio <= 0.95) return lerpColor(GREY, GREEN, (ratio - 0.5) / 0.45)
   if (ratio <= 1.05) return GREEN
-  if (ratio <= 1.4) return lerpColor(GREEN, YELLOW, (ratio - 1.05) / 0.35)
+  if (ratio <= 1.1) return lerpColor(GREEN, YELLOW, (ratio - 1.05) / 0.05)
+  if (ratio <= 1.2) return lerpColor(YELLOW, RED, (ratio - 1.1) / 0.1)
   return RED
 }
 
