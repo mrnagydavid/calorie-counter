@@ -26,6 +26,8 @@ interface FoodFormProps {
   hideUnitAndCalories?: boolean
   portions?: { desc: string; g: number }[] | null
   showSaveAsCustom?: boolean
+  /** When set, the food is already saved — hide checkbox, show label, auto-sync */
+  existingCustomFoodId?: string
   showNameField?: boolean
   nameRequired?: boolean
   submitLabel?: string
@@ -67,6 +69,7 @@ export function FoodForm({
   hideUnitAndCalories = false,
   portions = null,
   showSaveAsCustom = false,
+  existingCustomFoodId,
   showNameField = true,
   nameRequired = false,
   submitLabel = 'Add',
@@ -239,7 +242,7 @@ export function FoodForm({
       <div class={styles.total}>Total: {total} kcal</div>
 
       {/* Name */}
-      {showNameField && (
+      {showNameField && !existingCustomFoodId && (
         <div class={styles.section}>
           <div class={styles.fieldLabel}>
             Name {showSaveAsCustom && saveAsCustom ? <span class={styles.required}>*</span> : '(optional)'}
@@ -255,7 +258,7 @@ export function FoodForm({
       )}
 
       {/* Save as custom food */}
-      {showSaveAsCustom && (
+      {showSaveAsCustom && !existingCustomFoodId && (<>
         <div class={styles.checkboxRow}>
           <input
             type="checkbox"
@@ -265,7 +268,8 @@ export function FoodForm({
           />
           <label for="ffSaveCustom">Save as custom food</label>
         </div>
-      )}
+        <div class={styles.checkboxHint}>All entries are available under "Recents" <em>for a while</em>. A saved custom food is available under "My foods" <em>forever</em>.</div>
+      </>)}
 
       {showSaveAndAddNew && onSaveAndAddNew && (
         <button class={styles.submitButton} disabled={!canSubmit} onClick={handleSaveAndAddNew}>

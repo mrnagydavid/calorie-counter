@@ -55,6 +55,25 @@
   border-color: var(--color-primary);
 }
 
+.filterRow {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filterLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.filterLabel input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+}
+
 .resultList {
   flex: 1;
   overflow-y: auto;
@@ -67,18 +86,54 @@
   font-size: 14px;
 }
 
+.resultRow {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .resultItem {
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  width: 100%;
+  flex: 1;
   text-align: left;
 }
 
 .resultItem:active {
   background: var(--color-bg-secondary);
+}
+
+.deleteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  margin-right: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+}
+
+.deleteButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.deleteButton:active,
+.deleteConfirm {
+  color: var(--color-red);
+}
+
+.deleteConfirm {
+  font-size: 12px;
+  font-weight: 600;
+  width: auto;
+  padding: 8px 12px;
 }
 
 .resultName {

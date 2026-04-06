@@ -34,6 +34,7 @@ interface FormFill {
   portions?: { desc: string; g: number }[] | null
   isLiquid?: boolean
   searchQuery?: string
+  customFoodId?: string
 }
 
 export function FoodPicker({
@@ -46,6 +47,7 @@ export function FoodPicker({
 }: FoodPickerProps) {
   const [searching, setSearching] = useState(false)
   const [searchingCustom, setSearchingCustom] = useState(false)
+  const [customSearchQuery, setCustomSearchQuery] = useState('')
   const [scanning, setScanning] = useState(false)
 
   // When a search/barcode/recent fills the form, we store the fill data
@@ -62,7 +64,7 @@ export function FoodPicker({
     })
   }, [])
 
-  const customFoodCount = useLiveQuery(() => db.customFoods.filter((f) => !f.barcode).count())
+  const customFoodCount = useLiveQuery(() => db.customFoods.count())
 
   const allIntakes = useLiveQuery(() =>
     db.intakeEntries.orderBy('createdAt').reverse().toArray(),
@@ -137,7 +139,7 @@ export function FoodPicker({
     setScanning(false)
   }, [applyFill])
 
-  const handleRecentTap = useCallback((item: RecentFood) => {
+  const handleRecentTap = useCallback(async (item: RecentFood) => {
     let qty: number
     if (item.unit === '100g' || item.unit === '100ml') {
       qty = Math.round(item.quantity * 100)
@@ -146,11 +148,13 @@ export function FoodPicker({
     } else {
       qty = item.quantity
     }
+    const match = await db.customFoods.where('name').equals(item.name).first()
     applyFill({
       name: item.name,
       unitCalories: item.unitCalories,
       unit: item.unit,
       quantity: qty,
+      customFoodId: match?.id,
     })
   }, [applyFill])
 
@@ -194,7 +198,7 @@ export function FoodPicker({
                 </button>
                 {(customFoodCount ?? 0) > 0 && (
                   <button class={styles.searchButton} onClick={() => setSearchingCustom(true)}>
-                    My recipes
+                    My foods
                   </button>
                 )}
                 <button class={styles.searchButton} onClick={() => setScanning(true)}>
@@ -255,6 +259,7 @@ export function FoodPicker({
             hideUnitAndCalories={!!formFill}
             portions={formFill?.portions ?? null}
             showSaveAsCustom={showSaveAsCustom}
+            existingCustomFoodId={formFill?.customFoodId}
             submitLabel={submitLabel}
             showSaveAndAddNew={showSaveAndAddNew}
             onSubmit={handleSubmit}
@@ -267,12 +272,21 @@ export function FoodPicker({
           <FoodSearch
             onSelect={handleSearchResult}
             onClose={() => setSearching(false)}
+            onShowMyFoods={(q) => {
+              setSearching(false)
+              setCustomSearchQuery(q)
+              setSearchingCustom(true)
+            }}
             initialQuery={formFill?.searchQuery ?? ''}
           />
         )}
 
         {searchingCustom && (
-          <CustomFoodSearch onSelect={handleCustomFoodResult} onClose={() => setSearchingCustom(false)} />
+          <CustomFoodSearch
+            onSelect={handleCustomFoodResult}
+            onClose={() => { setSearchingCustom(false); setCustomSearchQuery('') }}
+            initialQuery={customSearchQuery}
+          />
         )}
 
         {scanning && (

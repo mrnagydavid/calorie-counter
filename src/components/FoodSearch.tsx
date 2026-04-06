@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../db/index'
 import styles from './FoodSearch.module.css'
 
 interface FoodItem {
@@ -19,6 +21,7 @@ export interface FoodSearchResult {
 interface FoodSearchProps {
   onSelect: (result: FoodSearchResult, query: string) => void
   onClose: () => void
+  onShowMyFoods?: (query: string) => void
   initialQuery?: string
 }
 
@@ -77,12 +80,21 @@ function scoreMatch(name: string, query: string): number {
   return tierSum * 10000 + isBasic * 1000 + Math.min(name.length, 200)
 }
 
-export function FoodSearch({ onSelect, onClose, initialQuery = '' }: FoodSearchProps) {
+export function FoodSearch({ onSelect, onClose, onShowMyFoods, initialQuery = '' }: FoodSearchProps) {
   const [query, setQuery] = useState(initialQuery)
   const [foods, setFoods] = useState<FoodItem[] | null>(null)
   const [results, setResults] = useState<FoodItem[]>([])
   const [googleOpened, setGoogleOpened] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const allCustomFoods = useLiveQuery(() => db.customFoods.toArray())
+  const customFoodMatches = allCustomFoods && query.length >= 2
+    ? allCustomFoods.filter((f) => {
+        const lower = f.name.toLowerCase()
+        const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+        return words.every((w) => lower.includes(w))
+      }).length
+    : 0
 
   useEffect(() => { loadFoods().then(setFoods) }, [])
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -147,6 +159,15 @@ export function FoodSearch({ onSelect, onClose, initialQuery = '' }: FoodSearchP
                 ← Back to Add intake
               </button>
             )}
+          </div>
+        )}
+
+        {customFoodMatches > 0 && onShowMyFoods && (
+          <div class={styles.myFoodsHint}>
+            {customFoodMatches} match{customFoodMatches > 1 ? 'es' : ''} in your saved foods{' '}
+            <button class={styles.myFoodsLink} onClick={() => onShowMyFoods(query.trim())}>
+              Show
+            </button>
           </div>
         )}
 
