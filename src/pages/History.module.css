@@ -112,6 +112,10 @@
   min-width: 56px;
 }
 
+.dayInfoWeight {
+  min-width: 60px;
+}
+
 .dayName {
   font-size: 13px;
   color: var(--color-text-secondary);
@@ -159,8 +163,10 @@
 }
 
 .weightMonth {
+  font-size: 13px;
   color: var(--color-text-secondary);
-  margin-right: 4px;
+  width: 28px;
+  text-align: center;
 }
 
 /* Mini progress bar */

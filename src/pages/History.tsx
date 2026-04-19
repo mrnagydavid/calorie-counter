@@ -249,7 +249,6 @@ export function History() {
             <div class={styles.dayList}>
               {weightList.map((entry) => {
                 const d = new Date(+entry.date.slice(0, 4), +entry.date.slice(5, 7) - 1, +entry.date.slice(8, 10))
-                const dayName = DAY_NAMES[d.getDay()]
                 const dayNum = d.getDate()
                 const monthName = MONTH_NAMES[d.getMonth()].slice(0, 3)
 
@@ -259,8 +258,8 @@ export function History() {
                     class={styles.dayRow}
                     onClick={() => route(`/?date=${entry.date}`)}
                   >
-                    <div class={styles.dayInfo}>
-                      <span class={styles.dayName}>{dayName}</span>
+                    <div class={`${styles.dayInfo} ${styles.dayInfoWeight}`}>
+                      <span class={styles.weightMonth}>{monthName}</span>
                       <span class={styles.dayNum}>{dayNum}</span>
                     </div>
                     <div class={styles.dayMiddle}>
