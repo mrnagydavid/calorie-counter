@@ -9,6 +9,12 @@ import { NumericInput } from './NumericInput'
 
 const FOOD_EMOJIS = ['🍎', '🥚', '🍕', '🥑', '🍌', '🧀', '🥕', '🍩']
 
+const VALID_BARCODE_LENGTHS = new Set([8, 12, 13, 14])
+function isValidBarcode(s: string): boolean {
+  const trimmed = s.trim()
+  return /^\d+$/.test(trimmed) && VALID_BARCODE_LENGTHS.has(trimmed.length)
+}
+
 function FoodSpinner() {
   const [idx, setIdx] = useState(0)
   const ref = useRef<HTMLSpanElement>(null)
@@ -544,7 +550,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
             </div>
             <button
               class={styles.primaryButton}
-              disabled={!manualBarcode.trim()}
+              disabled={!isValidBarcode(manualBarcode)}
               onClick={() => handleBarcode(manualBarcode.trim())}
             >
               Look Up
@@ -569,6 +575,25 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                 Scan Again
               </button>
             </div>
+            <div class={styles.orDivider}>or enter barcode manually</div>
+            <div class={styles.inputRow}>
+              <input
+                type="text"
+                inputMode="numeric"
+                class={styles.amountInput}
+                value={manualBarcode}
+                onInput={(e) => setManualBarcode((e.target as HTMLInputElement).value)}
+                placeholder="e.g. 7622210100234"
+                style={{ flex: 1 }}
+              />
+            </div>
+            <button
+              class={styles.primaryButton}
+              disabled={!isValidBarcode(manualBarcode)}
+              onClick={() => handleBarcode(manualBarcode.trim())}
+            >
+              Search this barcode
+            </button>
           </>
         )}
 
