@@ -173,54 +173,47 @@ export function History() {
           </div>
 
           <div class={styles.dayList}>
-            {(() => {
-              const barScale = Math.max(
-                ...dayData!.map((d) => d.consumed),
-                ...dayData!.map((d) => d.target),
-                1,
-              )
-              return dayData!.map((day) => {
-                const ratio = day.target > 0 ? day.consumed / day.target : 0
-                const pct = barScale > 0 ? Math.min((day.consumed / barScale) * 100, 100) : 0
-                const color = barColor(ratio)
+            {dayData!.map((day) => {
+              const ratio = day.target > 0 ? day.consumed / day.target : 0
+              const pct = Math.min(ratio / 1.25, 1) * 100
+              const color = barColor(ratio)
 
-                return (
-                  <button
-                    key={day.dateStr}
-                    class={`${styles.dayRow} ${!day.hasEntries ? styles.dayRowEmpty : ''}`}
-                    onClick={() => route(`/?date=${day.dateStr}`)}
-                  >
-                    <div class={styles.dayInfo}>
-                      <span class={styles.dayName}>{day.dayName}</span>
-                      <span class={styles.dayNum}>{day.dayNum}</span>
-                    </div>
-                    <div class={styles.dayMiddle}>
-                      {day.hasEntries ? (
-                        <>
-                          <div class={styles.dayCalories}>
-                            <span class={styles.calorieNum}>🍔 {day.consumed}</span>
-                            <span class={styles.calorieNum}>{ratio < 0.95 ? '☑️' : ratio <= 1.05 ? '✅' : '⚠️'} {day.target}</span>
-                            {day.burned > 0 && (
-                              <span class={styles.burnedInfo}>(🏃 {day.burned})</span>
-                            )}
-                          </div>
-                          <div class={styles.miniBarTrack}>
-                            <div
-                              class={styles.miniBarFill}
-                              style={{ width: `${pct}%`, backgroundColor: color }}
-                            />
-                          </div>
-                        </>
-                      ) : (
+              return (
+                <button
+                  key={day.dateStr}
+                  class={`${styles.dayRow} ${!day.hasEntries ? styles.dayRowEmpty : ''}`}
+                  onClick={() => route(`/?date=${day.dateStr}`)}
+                >
+                  <div class={styles.dayInfo}>
+                    <span class={styles.dayName}>{day.dayName}</span>
+                    <span class={styles.dayNum}>{day.dayNum}</span>
+                  </div>
+                  <div class={styles.dayMiddle}>
+                    {day.hasEntries ? (
+                      <>
                         <div class={styles.dayCalories}>
-                          <span class={styles.dash}>—</span>
+                          <span class={styles.calorieNum}>🍔 {day.consumed}</span>
+                          <span class={styles.calorieNum}>{ratio < 0.95 ? '☑️' : ratio <= 1.05 ? '✅' : '⚠️'} {day.target}</span>
+                          {day.burned > 0 && (
+                            <span class={styles.burnedInfo}>(🏃 {day.burned})</span>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </button>
-                )
-              })
-            })()}
+                        <div class={styles.miniBarTrack}>
+                          <div
+                            class={styles.miniBarFill}
+                            style={{ width: `${pct}%`, backgroundColor: color }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div class={styles.dayCalories}>
+                        <span class={styles.dash}>—</span>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </>
       ) : (
