@@ -172,8 +172,11 @@ export function History() {
             </button>
           </div>
 
-          <div class={styles.dayList}>
-            {dayData!.map((day) => {
+          <div class={styles.limitMarker}>Daily calorie limit</div>
+          <div class={styles.dayListWrap}>
+            <div class={styles.limitLine} />
+            <div class={styles.dayList}>
+              {dayData!.map((day) => {
               const ratio = day.target > 0 ? day.consumed / day.target : 0
               const pct = Math.min(ratio / 1.25, 1) * 100
               const color = barColor(ratio)
@@ -214,6 +217,7 @@ export function History() {
                 </button>
               )
             })}
+            </div>
           </div>
         </>
       ) : (

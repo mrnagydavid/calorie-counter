@@ -87,6 +87,29 @@
   flex-direction: column;
 }
 
+.limitMarker {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-align: right;
+  padding-right: calc(20% - 4.8px);
+  padding-bottom: 4px;
+}
+
+.dayListWrap {
+  position: relative;
+}
+
+.limitLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(80% + 4.8px);
+  width: 0;
+  border-left: 1px dashed var(--color-text-secondary);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 .dayRow {
   display: flex;
   align-items: center;
