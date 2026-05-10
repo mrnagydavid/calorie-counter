@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from 'preact/hooks'
-import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/index'
-import { formatDate, todayString } from '../db/dates'
-import { getTargetsForRange } from '../db/dailyTargets'
+import { route } from 'preact-router'
+import { useEffect, useMemo, useState } from 'preact/hooks'
 import { WeightChart } from '../components/WeightChart'
+import { getTargetsForRange } from '../db/dailyTargets'
+import { formatDate, todayString } from '../db/dates'
+import { db } from '../db/index'
 import { barColor } from '../utils/barColor'
 import styles from './History.module.css'
 
@@ -172,7 +172,7 @@ export function History() {
             </button>
           </div>
 
-          <div class={styles.limitMarker}>Daily calorie limit</div>
+          <div class={styles.limitMarker}>Calorie target of the day</div>
           <div class={styles.dayListWrap}>
             <div class={styles.limitLine} />
             <div class={styles.dayList}>
