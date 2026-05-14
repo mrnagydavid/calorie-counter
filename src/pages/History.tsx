@@ -179,6 +179,7 @@ export function History() {
               {dayData!.map((day) => {
               const ratio = day.target > 0 ? day.consumed / day.target : 0
               const pct = Math.min(ratio / 1.25, 1) * 100
+              const cropped = ratio > 1.25
               const color = barColor(ratio)
 
               return (
@@ -203,7 +204,7 @@ export function History() {
                         </div>
                         <div class={styles.miniBarTrack}>
                           <div
-                            class={styles.miniBarFill}
+                            class={`${styles.miniBarFill} ${cropped ? styles.miniBarFillCropped : ''}`}
                             style={{ width: `${pct}%`, backgroundColor: color }}
                           />
                         </div>
