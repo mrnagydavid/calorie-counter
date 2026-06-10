@@ -1,13 +1,17 @@
-import { Html5Qrcode } from 'html5-qrcode'
 import { route } from 'preact-router'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { db } from '../db/index'
 import { lookupBarcode, type CalorieVariant, type OFFProduct, type LookupError } from '../services/openfoodfacts'
+import { BarcodeDetector, ensureWasmConfigured, SCAN_FORMATS } from '../services/barcodeDetector'
 import { FoodForm, type FoodFormResult } from './FoodForm'
 import styles from './BarcodeScanner.module.css'
 import { NumericInput } from './NumericInput'
 
 const FOOD_EMOJIS = ['🍎', '🥚', '🍕', '🥑', '🍌', '🧀', '🥕', '🍩']
+
+// Throttle the detect loop to ~9 attempts/sec. The wasm decode is expensive, so we pace
+// with a recursive setTimeout (the next attempt is scheduled only after the current finishes).
+const DETECT_INTERVAL_MS = 110
 
 const VALID_BARCODE_LENGTHS = new Set([8, 12, 13, 14])
 function isValidBarcode(s: string): boolean {
@@ -75,62 +79,164 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
   const [amount, setAmount] = useState('100')
   const [servingQty, setServingQty] = useState(1)
   const [manualBarcode, setManualBarcode] = useState('')
-  const containerRef = useRef<HTMLDivElement>(null)
-  const scannerRef = useRef<Html5Qrcode | null>(null)
+  const [torchSupported, setTorchSupported] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const trackRef = useRef<MediaStreamTrack | null>(null)
+  const detectorRef = useRef<BarcodeDetector | null>(null)
+  const loopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scannedRef = useRef(false)
   const runningRef = useRef(false)
+  const epochRef = useRef(0)
+  const detectingRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
+  // Refs for forward/self references the detect loop needs, so the loop's useCallback can list
+  // honest deps without a TDZ on later-defined callbacks (keeps exhaustive-deps happy + stable).
+  const detectLoopRef = useRef<(epoch: number) => void>(() => {})
+  const handleBarcodeRef = useRef<(barcode: string) => void>(() => {})
 
+  // Idempotent teardown: invalidate any in-flight async work (epoch bump), cancel the loop,
+  // turn the torch off, release every camera track, and detach the stream from the <video>.
+  // Releasing tracks + nulling srcObject is what reliably clears the OS camera indicator.
   const stopCamera = useCallback(() => {
-    const scanner = scannerRef.current
-    if (scanner) {
-      if (runningRef.current) {
-        scanner.stop().catch(() => {}).finally(() => {
-          try { scanner.clear() } catch { /* ignore */ }
-        })
-      } else {
-        try { scanner.clear() } catch { /* ignore */ }
-      }
-      scannerRef.current = null
-      runningRef.current = false
+    epochRef.current++
+    runningRef.current = false
+    detectingRef.current = false
+    if (loopTimerRef.current !== null) {
+      clearTimeout(loopTimerRef.current)
+      loopTimerRef.current = null
     }
+    const track = trackRef.current
+    if (track) {
+      try { track.applyConstraints({ advanced: [{ torch: false }] }) } catch { /* ignore */ }
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    if (videoRef.current) videoRef.current.srcObject = null
+    streamRef.current = null
+    trackRef.current = null
+    setTorchOn(false)
+    setTorchSupported(false)
   }, [])
 
-  const startCamera = useCallback(() => {
-    const container = containerRef.current
-    if (!container) return
+  // Self-rescheduling detection loop. `epoch` is captured per start; if a teardown or restart
+  // happens, the epoch no longer matches and the loop (or a late-resolving detect()) bails.
+  // Self/forward references (itself, handleBarcode) go through refs so the dep list stays honest.
+  const detectLoop = useCallback(async (epoch: number) => {
+    if (epoch !== epochRef.current || !runningRef.current) return
+
+    const video = videoRef.current
+    const detector = detectorRef.current
+    if (video && detector && !detectingRef.current && video.readyState >= video.HAVE_CURRENT_DATA) {
+      detectingRef.current = true
+      try {
+        const results = await detector.detect(video)
+        // Guard: this detect() may have resolved after teardown — do nothing if so.
+        if (epoch !== epochRef.current || !runningRef.current) return
+        const hit = results.find((r) => isValidBarcode(r.rawValue))
+        if (hit) {
+          if (scannedRef.current) return
+          scannedRef.current = true
+          stopCamera()
+          handleBarcodeRef.current(hit.rawValue.trim())
+          return
+        }
+      } catch {
+        // Transient decode error (e.g. frame not ready) — keep scanning.
+      } finally {
+        detectingRef.current = false
+      }
+    }
+
+    // Re-check before rescheduling: a detect() that rejected after teardown reaches here, and
+    // we must not leave a stray timer behind once the camera has stopped.
+    if (epoch !== epochRef.current || !runningRef.current) return
+    loopTimerRef.current = setTimeout(() => { detectLoopRef.current(epoch) }, DETECT_INTERVAL_MS)
+  }, [stopCamera])
+  detectLoopRef.current = detectLoop
+
+  const startCamera = useCallback(async () => {
+    const video = videoRef.current
+    if (!video) return
 
     stopCamera()
-    container.innerHTML = ''
     scannedRef.current = false
+    const myEpoch = ++epochRef.current
+    ensureWasmConfigured()
 
-    const readerId = `reader-${Date.now()}`
-    const el = document.createElement('div')
-    el.id = readerId
-    container.appendChild(el)
-
-    const scanner = new Html5Qrcode(readerId)
-    scannerRef.current = scanner
-
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 150 } },
-      (decodedText) => {
-        if (scannedRef.current) return
-        scannedRef.current = true
-        runningRef.current = false
-        scanner.stop().catch(() => {})
-        handleBarcode(decodedText)
-      },
-      () => {},
-    ).then(() => {
-      runningRef.current = true
-    }).catch((err) => {
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        // `ideal` (not `exact`) so a front-only/low-res device still gets a camera
+        // instead of an OverconstrainedError. Higher resolution sharpens small barcodes.
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      })
+    } catch (err) {
+      if (myEpoch !== epochRef.current) return
       console.error('Camera start failed:', err)
-      runningRef.current = false
       setState({ step: 'error', message: 'Camera not available. Please use manual entry.' })
-    })
-  }, [])
+      return
+    }
+
+    // Torn down (closed/unmounted) while awaiting permission — release the orphaned stream.
+    if (myEpoch !== epochRef.current) {
+      stream.getTracks().forEach((t) => t.stop())
+      return
+    }
+
+    streamRef.current = stream
+    const track = stream.getVideoTracks()[0]
+    trackRef.current = track
+
+    video.srcObject = stream
+    video.muted = true
+    try {
+      await video.play()
+    } catch {
+      // Autoplay can reject if interrupted by teardown — harmless.
+    }
+    if (myEpoch !== epochRef.current) { stopCamera(); return }
+
+    // Best-effort camera tuning — never throw (focusMode is typically unsupported on iOS).
+    try {
+      const caps = track.getCapabilities?.() ?? {}
+      if (Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+        try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }) } catch { /* ignore */ }
+      }
+      setTorchSupported(caps.torch === true)
+    } catch {
+      setTorchSupported(false)
+    }
+    if (myEpoch !== epochRef.current) { stopCamera(); return }
+
+    // Construct once and reuse across restarts (holds no camera resource).
+    if (!detectorRef.current) {
+      detectorRef.current = new BarcodeDetector({ formats: SCAN_FORMATS })
+    }
+
+    runningRef.current = true
+    detectingRef.current = false
+    loopTimerRef.current = setTimeout(() => { detectLoopRef.current(myEpoch) }, DETECT_INTERVAL_MS)
+  }, [stopCamera])
+
+  const toggleTorch = useCallback(async () => {
+    const track = trackRef.current
+    if (!track) return
+    const next = !torchOn
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] })
+      setTorchOn(next)
+    } catch {
+      // Some devices advertise torch but reject applyConstraints — don't show a broken control.
+      setTorchSupported(false)
+      setTorchOn(false)
+    }
+  }, [torchOn])
 
   const handleBarcode = useCallback(async (barcode: string) => {
     setState({ step: 'scanning', loading: true })
@@ -226,19 +332,23 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
     // Timeout or network error
     setState({ step: 'lookup-error', barcode, error: result.error })
   }, [])
+  handleBarcodeRef.current = handleBarcode
 
+  // Start the camera whenever we (re)enter the live scanning step; stop it on any transition
+  // away (loading/found/not-found/error) and on unmount. Effects run after commit, so the
+  // <video> element is mounted by the time startCamera reads videoRef.
+  const isScanningLive = state.step === 'scanning' && !state.loading
   useEffect(() => {
-    if (state.step === 'scanning' && !state.loading) {
-      startCamera()
-      return stopCamera
+    if (isScanningLive) {
+      void startCamera()
     }
-  }, [state.step, state.step === 'scanning' && state.loading])
+    return stopCamera
+  }, [isScanningLive, startCamera, stopCamera])
 
-  // Cleanup on unmount: abort in-flight fetch + stop camera
+  // Abort any in-flight lookup on unmount.
   useEffect(() => {
     return () => {
       abortRef.current?.abort()
-      stopCamera()
     }
   }, [])
 
@@ -278,12 +388,12 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
 
   const handleSaveAndScan = useCallback(async () => {
     await saveEntry()
+    // Returning to the scanning step re-triggers the camera-start effect (after commit).
     setState({ step: 'scanning', loading: false })
     setSelectedIdx(0)
     setAmount('100')
     setServingQty(1)
-    startCamera()
-  }, [saveEntry, startCamera])
+  }, [saveEntry])
 
   const handleSaveAndAddManually = useCallback(async () => {
     await saveEntry()
@@ -396,7 +506,18 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
             ) : (
               <>
                 <div class={styles.cameraWrapper}>
-                  <div ref={containerRef} />
+                  <video ref={videoRef} muted autoplay playsinline />
+                  {torchSupported && (
+                    <button
+                      type="button"
+                      class={`${styles.torchButton} ${torchOn ? styles.torchOn : ''}`}
+                      aria-label="Toggle flashlight"
+                      aria-pressed={torchOn}
+                      onClick={toggleTorch}
+                    >
+                      🔦
+                    </button>
+                  )}
                 </div>
                 <div class={styles.hint}>Point camera at a barcode</div>
               </>
@@ -570,7 +691,6 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
               </button>
               <button class={styles.secondaryButton} onClick={() => {
                 setState({ step: 'scanning', loading: false })
-                startCamera()
               }}>
                 Scan Again
               </button>
