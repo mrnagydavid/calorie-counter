@@ -93,6 +93,32 @@
   color: var(--color-text-secondary);
 }
 
+/* Manual barcode entry under the camera (fallback when the camera can't read the code) */
+.manualRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manualButton {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.manualButton:hover {
+  background: var(--color-primary-dark);
+}
+
+.manualButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .lookupScreen {
   display: flex;
   flex-direction: column;

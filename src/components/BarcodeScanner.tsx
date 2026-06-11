@@ -359,6 +359,27 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                   </Suspense>
                 )}
                 <div class={styles.hint}>Point camera at a barcode</div>
+                <div class={styles.orDivider}>or enter the number</div>
+                <form
+                  class={styles.manualRow}
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (isValidBarcode(manualBarcode)) handleBarcode(manualBarcode.trim())
+                  }}
+                >
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    class={styles.amountInput}
+                    value={manualBarcode}
+                    onInput={(e) => setManualBarcode((e.target as HTMLInputElement).value)}
+                    placeholder="e.g. 7622210100234"
+                    style={{ flex: 1 }}
+                  />
+                  <button type="submit" class={styles.manualButton} disabled={!isValidBarcode(manualBarcode)}>
+                    Look up
+                  </button>
+                </form>
               </>
             )}
           </>
