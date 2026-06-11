@@ -17,3 +17,22 @@ interface MediaTrackConstraintSet {
   torch?: boolean
   focusMode?: string
 }
+
+// The native BarcodeDetector API (https://wicg.github.io/shape-detection-api/) is not yet in
+// lib.dom.d.ts. Minimal ambient declarations so we can feature-detect and use it directly.
+interface DetectedBarcode {
+  boundingBox: DOMRectReadOnly
+  cornerPoints: { x: number; y: number }[]
+  format: string
+  rawValue: string
+}
+
+interface BarcodeDetectorOptions {
+  formats: string[]
+}
+
+declare class BarcodeDetector {
+  constructor(options?: BarcodeDetectorOptions)
+  static getSupportedFormats(): Promise<string[]>
+  detect(source: CanvasImageSource | Blob | ImageData): Promise<DetectedBarcode[]>
+}

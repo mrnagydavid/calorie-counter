@@ -11,7 +11,7 @@ Lightweight PWA for tracking daily calorie intake. Offline-first, no backend (v1
 - **Linting:** oxlint
 - **Local storage:** IndexedDB via Dexie.js, reactive queries via `dexie-react-hooks` + `preact/compat`
 - **Routing:** `preact-router`
-- **Barcode scanning:** `html5-qrcode`
+- **Barcode scanning:** native `BarcodeDetector` where supported (Android Chrome), `html5-qrcode` fallback on iOS
 - **Food database:** Open Food Facts API (direct client-side calls)
 - **PWA:** `vite-plugin-pwa` (Workbox)
 
