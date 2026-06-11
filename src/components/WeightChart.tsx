@@ -87,19 +87,17 @@ export function WeightChart({ year }: WeightChartProps) {
   const yMax = Math.ceil((mid + range / 2 + range * 0.1) * 10) / 10
   const yRange = yMax - yMin
 
-  // Find monthly lows: for each month, the point with the lowest weight
-  const monthlyLows = new Set<string>()
-  const byMonth = new Map<number, DataPoint>()
+  // Headline points to highlight (big dot) + label: the lowest, the highest, and the latest
+  // weight. dataPoints is sorted by date, so the last one is the latest. Often these coincide
+  // (e.g. the latest reading is also a new low) — that's deduped where they're used.
+  const latestPoint = dataPoints[dataPoints.length - 1]
+  let minPoint = dataPoints[0]
+  let maxPoint = dataPoints[0]
   for (const d of dataPoints) {
-    const month = +d.date.slice(5, 7)
-    const existing = byMonth.get(month)
-    if (!existing || d.weight < existing.weight) {
-      byMonth.set(month, d)
-    }
+    if (d.weight < minPoint.weight) minPoint = d
+    if (d.weight > maxPoint.weight) maxPoint = d
   }
-  for (const d of byMonth.values()) {
-    monthlyLows.add(d.date)
-  }
+  const keyDates = new Set([minPoint.date, maxPoint.date, latestPoint.date])
 
   const gridStep = yRange <= 2 ? 0.5 : yRange <= 5 ? 1 : 2
   const gridLines: number[] = []
@@ -127,6 +125,35 @@ export function WeightChart({ year }: WeightChartProps) {
     const doy = dayOfYear(`${year}-${String(i + 1).padStart(2, '0')}-01`)
     return { label, x: toX(doy) }
   })
+
+  // One value label per headline point (lowest / highest / latest). A point low on the chart gets
+  // its label above the dot, a high one below — this keeps labels off the top edge and the bottom
+  // month axis. Placed in priority order (latest, then lowest, then highest); coincident points are
+  // deduped and the rare residual overlap (e.g. a recent peak near the yearly max) is skipped.
+  const labelText = (w: number) => (w % 1 === 0 ? String(w) : w.toFixed(1))
+  // Approx glyph advance in viewBox units at the 11px label size (digits ~6, '.' ~3).
+  const labelHalfWidth = (text: string) => {
+    let w = 0
+    for (const c of text) w += c === '.' ? 3 : 6
+    return w / 2
+  }
+  const midPlot = CHART_PADDING_TOP + plotHeight / 2
+  const placedLabels: { date: string; x: number; y: number; text: string }[] = []
+  for (const d of [latestPoint, minPoint, maxPoint]) {
+    if (placedLabels.some((p) => p.date === d.date)) continue
+    const text = labelText(d.weight)
+    const x = toX(d.dayOfYear)
+    const dotY = toY(d.weight)
+    const y = dotY > midPlot ? dotY - 10 : dotY + 16
+    const halfW = labelHalfWidth(text)
+    const overlaps = placedLabels.some((p) => {
+      const pHalf = labelHalfWidth(p.text)
+      const overlapX = x - halfW < p.x + pHalf + 2 && x + halfW > p.x - pHalf - 2
+      const overlapY = y - 9 < p.y + 2 && y + 2 > p.y - 9
+      return overlapX && overlapY
+    })
+    if (!overlaps) placedLabels.push({ date: d.date, x, y, text })
+  }
 
   return (
     <div class={styles.container}>
@@ -187,29 +214,29 @@ export function WeightChart({ year }: WeightChartProps) {
 
         {/* Data points */}
         {dataPoints.map((d) => {
-          const isMonthlyLow = monthlyLows.has(d.date)
+          const isKeyPoint = keyDates.has(d.date)
           return (
             <g key={d.date}>
               <circle
                 cx={toX(d.dayOfYear)}
                 cy={toY(d.weight)}
-                r={isMonthlyLow ? DOT_RADIUS_BIG : DOT_RADIUS_SMALL}
+                r={isKeyPoint ? DOT_RADIUS_BIG : DOT_RADIUS_SMALL}
                 fill="var(--color-primary)"
               />
             </g>
           )
         })}
 
-        {/* Labels below monthly low dots */}
-        {dataPoints.filter((d) => monthlyLows.has(d.date)).map((d) => (
+        {/* Value labels for the headline points (lowest / highest / latest) */}
+        {placedLabels.map((p) => (
           <text
-            key={`label-${d.date}`}
-            x={toX(d.dayOfYear)}
-            y={toY(d.weight) + 16}
+            key={`label-${p.date}`}
+            x={p.x}
+            y={p.y}
             text-anchor="middle"
             class={styles.valueLabel}
           >
-            {d.weight % 1 === 0 ? d.weight : d.weight.toFixed(1)}
+            {p.text}
           </text>
         ))}
       </svg>
