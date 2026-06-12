@@ -13,12 +13,6 @@
   fill: var(--color-text-secondary);
 }
 
-.valueLabel {
-  font-size: 11px;
-  font-weight: 600;
-  fill: var(--color-text);
-}
-
 .empty {
   display: flex;
   align-items: center;
