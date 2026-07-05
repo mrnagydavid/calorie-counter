@@ -241,6 +241,42 @@
   font-weight: 500;
 }
 
+/* iOS-only install / data-retention note — a soft callout so it reads as helpful, not alarming. */
+.iosNote {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.iosNote p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.iosNote strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.iosSteps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text);
+}
+
+.iosShare {
+  vertical-align: -2px;
+  color: var(--color-primary);
+}
+
 .legalText {
   padding: 12px 16px;
   background: var(--color-bg-secondary);

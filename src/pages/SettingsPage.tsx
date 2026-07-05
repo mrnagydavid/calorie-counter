@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
 import { NumericInput } from '../components/NumericInput'
 import { getInstallPrompt, clearInstallPrompt } from '../components/InstallBanner'
+import { IosInstallNote } from './IosInstallNote'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type DayOfWeek } from '../db/index'
 import {
@@ -33,6 +34,7 @@ export function SettingsPage() {
       />
       <DataManagementSection />
       <InstallSection />
+      <IosInstallNote />
       <LegalSection />
       <p class={styles.version}>v{__COMMIT_HASH__}</p>
     </div>
