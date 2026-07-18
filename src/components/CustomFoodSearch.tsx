@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
+import { SortToggle } from './SortToggle'
+import { sortCustomFoods, type SortMode } from '../utils/sortCustomFoods'
 import styles from './CustomFoodSearch.module.css'
 
 export interface CustomFoodResult {
@@ -24,18 +26,19 @@ function matchesQuery(name: string, query: string): boolean {
 export function CustomFoodSearch({ onSelect, onClose, initialQuery = '' }: CustomFoodSearchProps) {
   const [query, setQuery] = useState(initialQuery)
   const [hideBarcode, setHideBarcode] = useState(true)
+  const [sort, setSort] = useState<SortMode>('date')
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const allCustomFoods = useLiveQuery(() =>
-    db.customFoods.orderBy('lastUsed').reverse().toArray(),
-  )
+  const allCustomFoods = useLiveQuery(() => db.customFoods.toArray())
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
-  const filtered = allCustomFoods
-    ? hideBarcode ? allCustomFoods.filter((f) => !f.barcode) : allCustomFoods
-    : []
+  const filtered = useMemo(() => {
+    if (!allCustomFoods) return []
+    const list = hideBarcode ? allCustomFoods.filter((f) => !f.barcode) : allCustomFoods
+    return sortCustomFoods(list, sort)
+  }, [allCustomFoods, hideBarcode, sort])
 
   const results = query.length >= 1
     ? filtered.filter((f) => matchesQuery(f.name, query))
@@ -71,6 +74,7 @@ export function CustomFoodSearch({ onSelect, onClose, initialQuery = '' }: Custo
         </div>
 
         <div class={styles.filterRow}>
+          <SortToggle value={sort} onChange={setSort} />
           <label class={styles.filterLabel}>
             <input
               type="checkbox"

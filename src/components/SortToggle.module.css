@@ -1,0 +1,23 @@
+.sortToggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.sortButton {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: transparent;
+}
+
+.sortActive {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
+import { route } from 'preact-router'
 import { NumericInput } from '../components/NumericInput'
 import { getInstallPrompt, clearInstallPrompt } from '../components/InstallBanner'
 import { IosInstallNote } from './IosInstallNote'
@@ -32,6 +33,7 @@ export function SettingsPage() {
         baseline={settings.baselineCalories}
         overrides={settings.dayOverrides}
       />
+      <MyFoodsSection />
       <DataManagementSection />
       <InstallSection />
       <IosInstallNote />
@@ -173,6 +175,19 @@ function DayOverridesSection({
           Daily average: <strong>{computeWeeklyAverage(baseline, cleaned)} kcal</strong>
         </div>
       )}
+    </section>
+  )
+}
+
+function MyFoodsSection() {
+  const count = useLiveQuery(() => db.customFoods.count())
+
+  return (
+    <section class={styles.section}>
+      <h2 class={styles.sectionTitle}>My Foods</h2>
+      <button class={styles.dataButton} onClick={() => route('/my-foods')}>
+        🥗 Manage saved foods{count ? ` (${count})` : ''}
+      </button>
     </section>
   )
 }
