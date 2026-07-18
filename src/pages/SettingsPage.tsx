@@ -1,18 +1,18 @@
-import { useState, useEffect, useCallback } from 'preact/hooks'
-import { route } from 'preact-router'
-import { NumericInput } from '../components/NumericInput'
-import { getInstallPrompt, clearInstallPrompt } from '../components/InstallBanner'
-import { IosInstallNote } from './IosInstallNote'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { route } from 'preact-router'
+import { useCallback, useEffect, useState } from 'preact/hooks'
+import { clearInstallPrompt, getInstallPrompt } from '../components/InstallBanner'
+import { NumericInput } from '../components/NumericInput'
+import { updateTodayTarget } from '../db/dailyTargets'
 import { db, type DayOfWeek } from '../db/index'
 import {
+  cleanOverrides,
+  computeWeeklyAverage,
+  DAYS,
   getOrCreateSettings,
   updateSettings,
-  cleanOverrides,
-  DAYS,
-  computeWeeklyAverage,
 } from '../db/settings'
-import { updateTodayTarget } from '../db/dailyTargets'
+import { IosInstallNote } from './IosInstallNote'
 import styles from './SettingsPage.module.css'
 
 export function SettingsPage() {
@@ -186,7 +186,7 @@ function MyFoodsSection() {
     <section class={styles.section}>
       <h2 class={styles.sectionTitle}>My Foods</h2>
       <button class={styles.dataButton} onClick={() => route('/my-foods')}>
-        🥗 Manage saved foods{count ? ` (${count})` : ''}
+        Manage saved foods{count ? ` (${count})` : ''}
       </button>
     </section>
   )
