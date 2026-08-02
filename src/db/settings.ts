@@ -18,7 +18,7 @@ export async function getOrCreateSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(
-  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil'>>,
+  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil' | 'birthYear' | 'sex' | 'lastWeightKg'>>,
 ): Promise<void> {
   const current = await getOrCreateSettings()
   const updated = {
@@ -32,6 +32,16 @@ export async function updateSettings(
   if ('baselineCalories' in updates || 'dayOverrides' in updates) {
     await updateTodayTarget(updated)
   }
+}
+
+/** Age in whole years. Storing the birth year keeps this correct as time passes. */
+export function ageFromBirthYear(birthYear: number): number {
+  return new Date().getFullYear() - birthYear
+}
+
+/** Convert a typed age back to a birth year for storage. */
+export function birthYearFromAge(age: number): number {
+  return new Date().getFullYear() - age
 }
 
 /** Remove overrides that equal the baseline (they're effectively "reset"). */

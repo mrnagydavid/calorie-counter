@@ -1,5 +1,8 @@
 import { useState, useCallback } from 'preact/hooks'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type IntakeEntry, type BurnEntry, type WeightEntry } from '../db/index'
+import { getOrCreateSettings, ageFromBirthYear } from '../db/settings'
+import { calcNetKcal, activityName } from '../services/activityEnergy'
 import { NumericInput } from './NumericInput'
 import styles from './EntryList.module.css'
 
@@ -34,10 +37,30 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
   const [editQty, setEditQty] = useState('')
   // Burn edit
   const [editCalories, setEditCalories] = useState('')
+  // Calculated burn edit: the activity's own inputs, recomputed on save
+  const [editDistance, setEditDistance] = useState('')
+  const [editDuration, setEditDuration] = useState('')
+  const [editHr, setEditHr] = useState('')
   // Unit calories (editable for all intake types)
   const [editUnitCal, setEditUnitCal] = useState('')
   // Weight edit
   const [editWeight, setEditWeight] = useState('')
+
+  const settings = useLiveQuery(() => getOrCreateSettings())
+
+  /** Inputs for a calculated burn, using the edit fields and the entry's own weight. */
+  const editedActivityInputs = (entry: BurnEntry) => {
+    const a = entry.activity!
+    return {
+      kind: a.kind,
+      weightKg: a.weightKg,
+      distanceKm: parseFloat(editDistance) || 0,
+      durationMin: parseInt(editDuration, 10) || 0,
+      avgHr: parseInt(editHr, 10) || 0,
+      age: settings?.birthYear ? ageFromBirthYear(settings.birthYear) : undefined,
+      sex: settings?.sex,
+    }
+  }
 
   const handleWeightDelete = useCallback(async () => {
     if (!weightEntry) return
@@ -85,6 +108,11 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
       } else {
         setEditQty(String(d.quantity))
       }
+    } else if (entry.data.activity) {
+      const a = entry.data.activity
+      setEditDistance(a.distanceKm != null ? String(a.distanceKm) : '')
+      setEditDuration(a.durationMin != null ? String(a.durationMin) : '')
+      setEditHr(a.avgHr != null ? String(a.avgHr) : '')
     } else {
       setEditCalories(String(entry.data.calories))
     }
@@ -102,6 +130,26 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
       }
       const calories = Math.round(unitCal * quantity)
       await db.intakeEntries.update(d.id, { unitCalories: unitCal, quantity, calories })
+    } else if (entry.data.activity) {
+      const burn = entry.data
+      const a = burn.activity!
+      const inputs = editedActivityInputs(burn)
+      const calories = calcNetKcal(inputs)
+      if (calories !== null && calories > 0) {
+        const activity = {
+          ...a,
+          ...(a.kind === 'bike'
+            ? { durationMin: inputs.durationMin, avgHr: inputs.avgHr }
+            : { distanceKm: inputs.distanceKm }),
+        }
+        // Keep a name the user wrote themselves; refresh a generated one
+        const wasGenerated = burn.name === activityName(a)
+        await db.burnEntries.update(burn.id, {
+          calories,
+          activity,
+          ...(wasGenerated ? { name: activityName(activity) } : {}),
+        })
+      }
     } else {
       const cal = parseInt(editCalories, 10)
       if (!isNaN(cal) && cal > 0) {
@@ -194,7 +242,13 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
               <div class={styles.entry} onClick={() => handleTap(entry.data.id)}>
                 <div class={styles.info}>
                   <div class={styles.name}>{entry.data.name}</div>
-                  <div class={styles.time}>{formatTime(entry.data.createdAt)}</div>
+                  <div class={styles.time}>
+                    {formatTime(entry.data.createdAt)}
+                    {entry.type === 'burn' && entry.data.activity &&
+                      entry.data.name !== activityName(entry.data.activity) && (
+                        <span class={styles.meta}>{activityName(entry.data.activity)}</span>
+                      )}
+                  </div>
                 </div>
                 <div class={`${styles.calories} ${entry.type === 'burn' ? styles.burn : ''}`}>
                   {entry.type === 'burn' ? '+' : ''}{entry.data.calories} kcal
@@ -281,7 +335,53 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
                 </div>
               )}
 
-              {isEditing && entry.type === 'burn' && (
+              {isEditing && entry.type === 'burn' && entry.data.activity && (
+                <div class={styles.editForm}>
+                  {entry.data.activity.kind === 'bike' ? (
+                    <>
+                      <div class={styles.editRow}>
+                        <label class={styles.editLabel}>Duration</label>
+                        <NumericInput
+                          class={styles.editInput}
+                          value={editDuration}
+                          onInput={(e) => setEditDuration((e.target as HTMLInputElement).value)}
+                        />
+                        <span class={styles.editUnit}>min</span>
+                      </div>
+                      <div class={styles.editRow}>
+                        <label class={styles.editLabel}>Avg HR</label>
+                        <NumericInput
+                          class={styles.editInput}
+                          value={editHr}
+                          onInput={(e) => setEditHr((e.target as HTMLInputElement).value)}
+                        />
+                        <span class={styles.editUnit}>bpm</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div class={styles.editRow}>
+                      <label class={styles.editLabel}>Distance</label>
+                      <NumericInput
+                        inputMode="decimal"
+                        class={styles.editInput}
+                        value={editDistance}
+                        onInput={(e) => setEditDistance((e.target as HTMLInputElement).value)}
+                        step="0.1"
+                      />
+                      <span class={styles.editUnit}>km</span>
+                    </div>
+                  )}
+                  <div class={styles.editTotal}>
+                    Burned: {calcNetKcal(editedActivityInputs(entry.data)) ?? '—'} kcal
+                  </div>
+                  <div class={styles.editActions}>
+                    <button class={styles.cancelButton} onClick={cancelEdit}>Cancel</button>
+                    <button class={styles.saveButton} onClick={() => saveEdit(entry)}>Save</button>
+                  </div>
+                </div>
+              )}
+
+              {isEditing && entry.type === 'burn' && !entry.data.activity && (
                 <div class={styles.editForm}>
                   <div class={styles.editRow}>
                     <label class={styles.editLabel}>Calories</label>

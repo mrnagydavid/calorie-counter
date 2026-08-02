@@ -9,12 +9,19 @@ export type DayOfWeek =
   | 'saturday'
   | 'sunday'
 
+export type Sex = 'male' | 'female'
+
 export interface Settings {
   id: 'user-settings'
   baselineCalories: number
   dayOverrides: Partial<Record<DayOfWeek, number>>
   exportReminderEnabled: boolean
   exportReminderDismissedUntil?: string // YYYY-MM format
+  // Personal details, stored as any profile field would be. They have no
+  // Profile input yet — the bike calculator collects and remembers them.
+  birthYear?: number // written from the typed age, so it self-ages
+  sex?: Sex
+  lastWeightKg?: number // fallback for calculators when no weigh-in exists
   createdAt: string
   updatedAt: string
 }
@@ -32,12 +39,24 @@ export interface IntakeEntry {
   createdAt: string
 }
 
+export type ActivityKind = 'walk' | 'run' | 'bike'
+
+/** Inputs a calculated burn was derived from, so it can be replayed and edited. */
+export interface BurnActivity {
+  kind: ActivityKind
+  weightKg: number // what it was computed with, for the record
+  distanceKm?: number // walk, run
+  durationMin?: number // bike
+  avgHr?: number // bike
+}
+
 export interface BurnEntry {
   id: string
   date: string
   name: string
-  calories: number
+  calories: number // always the net figure
   createdAt: string
+  activity?: BurnActivity // absent on manual entries
 }
 
 export interface CustomFood {

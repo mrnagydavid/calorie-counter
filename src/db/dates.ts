@@ -1,5 +1,7 @@
 import type { DayOfWeek } from './index'
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 /** Get today as YYYY-MM-DD */
 export function todayString(): string {
   return formatDate(new Date())
@@ -32,8 +34,20 @@ export function displayDate(dateStr: string): string {
   if (dateStr === today) return 'Today'
   if (dateStr === shiftDate(today, -1)) return 'Yesterday'
   const d = parseDate(dateStr)
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+}
+
+/** Format without the year: "28 Jul" */
+export function shortDate(dateStr: string): string {
+  const d = parseDate(dateStr)
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+}
+
+/** Whole days from dateStr until today. Negative when dateStr is in the future. */
+export function daysAgo(dateStr: string): number {
+  const then = parseDate(dateStr).getTime()
+  const now = parseDate(todayString()).getTime()
+  return Math.round((now - then) / 86400000)
 }
 
 /** Get DayOfWeek key from a YYYY-MM-DD string */

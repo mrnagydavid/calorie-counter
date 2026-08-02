@@ -33,6 +33,12 @@
   color: var(--color-text-secondary);
 }
 
+/* Activity params on a burn entry the user has renamed */
+.meta::before {
+  content: '·';
+  margin: 0 5px;
+}
+
 .calories {
   font-size: 15px;
   font-weight: 600;
