@@ -364,7 +364,7 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
               <span class={styles.unit}>bpm</span>
             </div>
             <div class={styles.hint}>
-              Reads your effort as a share of your max. Leave the default if you don't know yours.
+              Leave the default if you don't know yours.
             </div>
           </div>
         </>
