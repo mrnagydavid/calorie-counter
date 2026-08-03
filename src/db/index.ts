@@ -9,8 +9,6 @@ export type DayOfWeek =
   | 'saturday'
   | 'sunday'
 
-export type Sex = 'male' | 'female'
-
 export interface Settings {
   id: 'user-settings'
   baselineCalories: number
@@ -19,8 +17,7 @@ export interface Settings {
   exportReminderDismissedUntil?: string // YYYY-MM format
   // Personal details, stored as any profile field would be. They have no
   // Profile input yet — the bike calculator collects and remembers them.
-  birthYear?: number // written from the typed age, so it self-ages
-  sex?: Sex
+  maxHr?: number // maximum heart rate, for reading effort as a share of max
   lastWeightKg?: number // fallback for calculators when no weigh-in exists
   createdAt: string
   updatedAt: string

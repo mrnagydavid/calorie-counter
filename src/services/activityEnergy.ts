@@ -1,4 +1,4 @@
-import type { ActivityKind, Sex } from '../db/index'
+import type { ActivityKind } from '../db/index'
 
 /**
  * Energy cost of an activity, always NET of resting metabolism.
@@ -20,9 +20,27 @@ const RESTING_KCAL_PER_KG_MIN = (3.5 * 5) / 1000
  */
 const NET_KCAL_PER_KG_KM: Record<'walk' | 'run', number> = { walk: 0.5, run: 1.0 }
 
-/** Range the Keytel equation was validated over. */
-export const HR_MIN = 90
-export const HR_MAX = 150
+/**
+ * Fallback max heart rate when the rider hasn't set their own. Erring high here
+ * errs low on calories, which is the direction we want, so the default itself
+ * carries no extra correction.
+ */
+export const DEFAULT_MAX_HR = 180
+
+/**
+ * Assumed aerobic capacity in ml O2/kg/min, deliberately at the LOW end of the
+ * plausible range.
+ *
+ * This is the ONE place a conservative bias is applied. An overstated burn
+ * inflates the day's budget and the error compounds against you; an understated
+ * one is self-correcting. Do not add further margin elsewhere — stacked safety
+ * factors multiply into a number too low to be useful. Raise this toward 40
+ * (neutral, average fitness) if real rides come out consistently understated.
+ */
+const ASSUMED_VO2MAX = 35
+
+/** Below this share of max HR the linear fit degenerates, so results are clamped. */
+const MIN_USEFUL_HR_FRACTION = 0.5
 
 export interface ActivityInputs {
   kind: ActivityKind
@@ -30,8 +48,7 @@ export interface ActivityInputs {
   distanceKm?: number // walk, run
   durationMin?: number // bike
   avgHr?: number // bike
-  age?: number // bike
-  sex?: Sex // bike
+  maxHr?: number // bike, defaults to DEFAULT_MAX_HR
 }
 
 export function netWalkKcal(distanceKm: number, weightKg: number): number {
@@ -42,23 +59,32 @@ export function netRunKcal(distanceKm: number, weightKg: number): number {
   return NET_KCAL_PER_KG_KM.run * weightKg * distanceKm
 }
 
-/** Keytel et al. (2005): gross energy expenditure in kJ/min from heart rate. */
-function keytelKjPerMin(avgHr: number, weightKg: number, age: number, sex: Sex): number {
-  return sex === 'female'
-    ? -20.4022 + 0.4472 * avgHr - 0.1263 * weightKg + 0.074 * age
-    : -55.0969 + 0.6309 * avgHr + 0.1988 * weightKg + 0.2017 * age
+/**
+ * Effort as a MET value, from heart rate read as a share of maximum.
+ *
+ * Absolute bpm says nothing on its own — 130 is easy at one max HR and hard at
+ * another — so intensity goes through %HRmax, converted with Swain's relation
+ * (%VO2max = 1.41 * %HRmax - 42) and scaled by assumed aerobic capacity.
+ *
+ * The earlier Keytel equation was dropped because it carries no fitness term at
+ * all: it maps heart rate to energy at whatever fitness its cohort had, and that
+ * cohort was fitter than average, so it overstated every ride.
+ */
+export function metFromHeartRate(avgHr: number, maxHr: number = DEFAULT_MAX_HR): number {
+  const pctMax = (avgHr / maxHr) * 100
+  const pctVo2Max = 1.41 * pctMax - 42
+  const met = (ASSUMED_VO2MAX / 3.5) * (pctVo2Max / 100)
+  return Math.max(1, met) // 1 MET is rest — never below it
 }
 
 export function netBikeKcal(
   durationMin: number,
   avgHr: number,
   weightKg: number,
-  age: number,
-  sex: Sex,
+  maxHr: number = DEFAULT_MAX_HR,
 ): number {
-  const gross = Math.max(0, keytelKjPerMin(avgHr, weightKg, age, sex) / 4.184) * durationMin
-  const resting = RESTING_KCAL_PER_KG_MIN * weightKg * durationMin
-  return Math.max(0, gross - resting)
+  const met = metFromHeartRate(avgHr, maxHr)
+  return (met - 1) * RESTING_KCAL_PER_KG_MIN * weightKg * durationMin
 }
 
 /** Net kcal rounded to a whole number, or null when the inputs are incomplete. */
@@ -75,8 +101,7 @@ export function calcNetKcal(i: ActivityInputs): number | null {
 
   if (!(i.durationMin && i.durationMin > 0)) return null
   if (!(i.avgHr && i.avgHr > 0)) return null
-  if (!(i.age && i.age > 0) || !i.sex) return null
-  return Math.round(netBikeKcal(i.durationMin, i.avgHr, i.weightKg, i.age, i.sex))
+  return Math.round(netBikeKcal(i.durationMin, i.avgHr, i.weightKg, i.maxHr))
 }
 
 /** Auto-generated entry name, e.g. "Run · 5 km" or "Bike · 45 min @ 132 bpm". */
@@ -104,11 +129,15 @@ export function accuracyNote(i: ActivityInputs): { text: string; warn: boolean }
       warn: false,
     }
   }
-  if (i.avgHr && (i.avgHr < HR_MIN || i.avgHr > HR_MAX)) {
+  const maxHr = i.maxHr || DEFAULT_MAX_HR
+  if (i.avgHr && i.avgHr / maxHr < MIN_USEFUL_HR_FRACTION) {
     return {
-      text: `Heart rate outside ${HR_MIN}–${HR_MAX} bpm — treat this as a rough estimate.`,
+      text: `Heart rate is low against your max of ${maxHr} — treat this as a rough estimate.`,
       warn: true,
     }
   }
-  return { text: `Most accurate between ${HR_MIN} and ${HR_MAX} bpm.`, warn: false }
+  return {
+    text: 'Deliberately cautious, so your real burn is likely a little higher.',
+    warn: false,
+  }
 }

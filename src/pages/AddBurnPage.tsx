@@ -1,13 +1,14 @@
 import { useState, useMemo, useCallback, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type ActivityKind, type BurnActivity, type Sex } from '../db/index'
-import { getOrCreateSettings, updateSettings, ageFromBirthYear, birthYearFromAge } from '../db/settings'
+import { db, type ActivityKind, type BurnActivity } from '../db/index'
+import { getOrCreateSettings, updateSettings } from '../db/settings'
 import { shortDate, daysAgo } from '../db/dates'
 import {
   calcNetKcal,
   activityName,
   accuracyNote,
+  DEFAULT_MAX_HR,
   type ActivityInputs,
 } from '../services/activityEnergy'
 import { NumericInput } from '../components/NumericInput'
@@ -51,10 +52,8 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
   const [weightTouched, setWeightTouched] = useState(false)
   const [duration, setDuration] = useState('')
   const [avgHr, setAvgHr] = useState('')
-  const [age, setAge] = useState('')
-  const [ageTouched, setAgeTouched] = useState(false)
-  const [sex, setSex] = useState<Sex>('male')
-  const [sexTouched, setSexTouched] = useState(false)
+  const [maxHr, setMaxHr] = useState(String(DEFAULT_MAX_HR))
+  const [maxHrTouched, setMaxHrTouched] = useState(false)
 
   const allBurns = useLiveQuery(() =>
     db.burnEntries.orderBy('createdAt').reverse().toArray(),
@@ -83,12 +82,11 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
     setWeight(String(prefillWeight))
   }, [prefillWeight, weightTouched])
 
-  // --- prefill: age and sex, remembered from the last ride ---
+  // --- prefill: max heart rate, remembered from the last ride ---
   useEffect(() => {
-    if (!settings) return
-    if (!ageTouched && settings.birthYear) setAge(String(ageFromBirthYear(settings.birthYear)))
-    if (!sexTouched && settings.sex) setSex(settings.sex)
-  }, [settings, ageTouched, sexTouched])
+    if (!settings || maxHrTouched || !settings.maxHr) return
+    setMaxHr(String(settings.maxHr))
+  }, [settings, maxHrTouched])
 
   // --- current inputs, shared by the live result and the submit handler ---
   const inputs = useMemo<ActivityInputs | null>(() => {
@@ -99,10 +97,9 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
       distanceKm: parseFloat(distance) || 0,
       durationMin: parseInt(duration, 10) || 0,
       avgHr: parseInt(avgHr, 10) || 0,
-      age: parseInt(age, 10) || 0,
-      sex,
+      maxHr: parseInt(maxHr, 10) || DEFAULT_MAX_HR,
     }
-  }, [mode, weight, distance, duration, avgHr, age, sex])
+  }, [mode, weight, distance, duration, avgHr, maxHr])
 
   const netKcal = inputs ? calcNetKcal(inputs) : null
   const autoName = inputs ? activityName(inputs) : ''
@@ -114,7 +111,7 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
     setName(autoName)
   }, [inputs, autoName, nameTouched])
 
-  // --- recents: replayed with today's weight, age and sex ---
+  // --- recents: replayed with today's weight and max heart rate ---
   const recents = useMemo<RecentBurn[]>(() => {
     if (!allBurns) return []
     const seen = new Set<string>()
@@ -128,8 +125,7 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
         const replayed = calcNetKcal({
           ...entry.activity,
           weightKg: prefillWeight,
-          age: settings?.birthYear ? ageFromBirthYear(settings.birthYear) : undefined,
-          sex: settings?.sex,
+          maxHr: settings?.maxHr,
         })
         if (replayed !== null) calories = replayed
       }
@@ -207,13 +203,11 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
     // Remember what was typed, so the next ride only needs a duration and a heart rate
     await updateSettings({
       lastWeightKg: inputs.weightKg,
-      ...(inputs.kind === 'bike' && inputs.age
-        ? { birthYear: birthYearFromAge(inputs.age), sex }
-        : {}),
+      ...(inputs.kind === 'bike' && inputs.maxHr ? { maxHr: inputs.maxHr } : {}),
     })
 
     route('/')
-  }, [canSubmit, mode, date, name, manualCal, inputs, netKcal, autoName, sex])
+  }, [canSubmit, mode, date, name, manualCal, inputs, netKcal, autoName])
 
   const weightField = (
     <div class={styles.section}>
@@ -354,38 +348,23 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
           {weightField}
 
           <div class={styles.section}>
-            <div class={styles.fieldLabel}>Age</div>
+            <div class={styles.fieldLabel}>Your max heart rate</div>
             <div class={styles.inputRow}>
               <NumericInput
                 inputMode="numeric"
                 class={styles.calorieInput}
-                value={age}
+                value={maxHr}
                 onInput={(e) => {
-                  setAgeTouched(true)
-                  setAge((e.target as HTMLInputElement).value)
+                  setMaxHrTouched(true)
+                  setMaxHr((e.target as HTMLInputElement).value)
                 }}
-                placeholder="0"
+                placeholder={String(DEFAULT_MAX_HR)}
                 min="0"
               />
-              <span class={styles.unit}>years</span>
+              <span class={styles.unit}>bpm</span>
             </div>
-          </div>
-
-          <div class={styles.section}>
-            <div class={styles.fieldLabel}>Sex</div>
-            <div class={styles.toggle}>
-              <button
-                class={`${styles.toggleOption} ${sex === 'male' ? styles.toggleActive : ''}`}
-                onClick={() => { setSexTouched(true); setSex('male') }}
-              >
-                Male
-              </button>
-              <button
-                class={`${styles.toggleOption} ${sex === 'female' ? styles.toggleActive : ''}`}
-                onClick={() => { setSexTouched(true); setSex('female') }}
-              >
-                Female
-              </button>
+            <div class={styles.hint}>
+              Reads your effort as a share of your max. Leave the default if you don't know yours.
             </div>
           </div>
         </>

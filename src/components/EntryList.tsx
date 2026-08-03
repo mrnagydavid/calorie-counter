@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type IntakeEntry, type BurnEntry, type WeightEntry } from '../db/index'
-import { getOrCreateSettings, ageFromBirthYear } from '../db/settings'
+import { getOrCreateSettings } from '../db/settings'
 import { calcNetKcal, activityName } from '../services/activityEnergy'
 import { NumericInput } from './NumericInput'
 import styles from './EntryList.module.css'
@@ -57,8 +57,7 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
       distanceKm: parseFloat(editDistance) || 0,
       durationMin: parseInt(editDuration, 10) || 0,
       avgHr: parseInt(editHr, 10) || 0,
-      age: settings?.birthYear ? ageFromBirthYear(settings.birthYear) : undefined,
-      sex: settings?.sex,
+      maxHr: settings?.maxHr,
     }
   }
 
