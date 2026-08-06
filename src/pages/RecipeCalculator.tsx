@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { db } from '../db/index'
-import { todayString } from '../db/dates'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { FeatureIntro } from '../components/FeatureIntro'
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
 import { useDraftCache } from '../hooks/useDraftCache'
+import { useToday } from '../hooks/useToday'
 import styles from './RecipeCalculator.module.css'
 
 interface RecipeCalculatorDraft {
@@ -24,7 +24,8 @@ interface RecipeIngredient {
 }
 
 export function RecipeCalculator() {
-  const date = todayString()
+  // Re-read over midnight, so a calculator left open does not save the recipe under yesterday
+  const date = useToday()
 
   const [recipeName, setRecipeName] = useState('')
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([])

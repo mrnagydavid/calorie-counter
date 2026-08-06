@@ -3,8 +3,9 @@ import { route } from 'preact-router'
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { WeightChart } from '../components/WeightChart'
 import { getTargetsForRange } from '../db/dailyTargets'
-import { formatDate, todayString } from '../db/dates'
+import { formatDate } from '../db/dates'
 import { db } from '../db/index'
+import { useToday } from '../hooks/useToday'
 import { barColor } from '../utils/barColor'
 import styles from './History.module.css'
 
@@ -18,30 +19,32 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 type HistoryTab = 'calories' | 'weight'
 
 export function History() {
-  const today = new Date()
-  const [year, setYear] = useState(today.getFullYear())
-  const [month, setMonth] = useState(today.getMonth())
-  const [weightYear, setWeightYear] = useState(today.getFullYear())
+  const today = useToday()
+  const todayYear = +today.slice(0, 4)
+  const todayMonth = +today.slice(5, 7) - 1
+  const [year, setYear] = useState(todayYear)
+  const [month, setMonth] = useState(todayMonth)
+  const [weightYear, setWeightYear] = useState(todayYear)
   const [tab, setTab] = useState<HistoryTab>('calories')
 
-  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
-  const isCurrentYear = weightYear === today.getFullYear()
+  const isCurrentMonth = year === todayYear && month === todayMonth
+  const isCurrentYear = weightYear === todayYear
 
-  // Build date range for the month (calories view)
+  // Build date range for the month (calories view). Keyed on today too, so a day that starts
+  // while the screen is open is added instead of staying hidden until a reload.
   const { startDate, endDate, days } = useMemo(() => {
     const lastDay = new Date(year, month + 1, 0).getDate()
-    const todayStr = todayString()
     const daysInMonth: string[] = []
     for (let d = lastDay; d >= 1; d--) {
       const dateStr = formatDate(new Date(year, month, d))
-      if (dateStr <= todayStr) daysInMonth.push(dateStr)
+      if (dateStr <= today) daysInMonth.push(dateStr)
     }
     return {
       startDate: formatDate(new Date(year, month, 1)),
       endDate: formatDate(new Date(year, month, lastDay)),
       days: daysInMonth,
     }
-  }, [year, month])
+  }, [year, month, today])
 
   const settings = useLiveQuery(() => db.settings.get('user-settings'))
 

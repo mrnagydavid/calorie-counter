@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'preact/hooks'
+import { useState, useEffect, useMemo, useRef } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
-import { todayString, formatDate } from '../db/dates'
+import { todayString, shiftDate } from '../db/dates'
+import { useToday } from '../hooks/useToday'
 import { ensureTodayTarget, getTargetForDate, getTargetsForRange } from '../db/dailyTargets'
 import { DateNav } from '../components/DateNav'
 import { CalorieBudgetBar } from '../components/CalorieBudgetBar'
@@ -13,11 +14,37 @@ import { InstallBanner } from '../components/InstallBanner'
 import { ExportReminderBanner } from '../components/ExportReminderBanner'
 import styles from './Dashboard.module.css'
 
+// Only in-session navigation (a day tapped in History, or leaving the planner) creates a `?date=`
+// link, so one already in the URL when the document loads is last session's leftover and can be
+// days stale. Opening the app has to land on today, so the boot render drops it.
+const BOOT_URL = window.location.pathname + window.location.search
+let bootRenderPending = true
+
 export function Dashboard() {
+  const today = useToday()
   const [date, setDate] = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('date') || todayString()
+    const param = new URLSearchParams(window.location.search).get('date')
+    const isBootRender =
+      bootRenderPending && window.location.pathname + window.location.search === BOOT_URL
+    bootRenderPending = false
+    return !param || isBootRender ? todayString() : param
   })
+
+  // Keep the URL honest after a dropped param, so going back to it can't resurrect the stale date.
+  useEffect(() => {
+    if (window.location.search.includes('date=') && date === todayString()) {
+      history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
+
+  // Follow the day over midnight: a user sitting on the day that just ended gets moved to the new
+  // one. A date they picked themselves stays put — only "Today" follows.
+  const dayRef = useRef(today)
+  useEffect(() => {
+    if (today === dayRef.current) return
+    setDate((d) => (d === dayRef.current ? today : d))
+    dayRef.current = today
+  }, [today])
 
   // Listen for custom event dispatched when "Today" tab is tapped while already on "/"
   useEffect(() => {
@@ -31,7 +58,7 @@ export function Dashboard() {
 
   useEffect(() => {
     getOrCreateSettings().then((s) => ensureTodayTarget(s))
-  }, [])
+  }, [today])
 
   // Read the stored target reactively; backfill runs via useEffect (outside read-only liveQuery)
   const storedTarget = useLiveQuery(
@@ -64,15 +91,15 @@ export function Dashboard() {
   }, [weightEntries])
 
   // --- On-track stats (last 7d / 30d) ---
+  // The 30 days before today, newest first. Keyed on today so the window rolls with the date
+  // instead of freezing at whatever day the screen mounted on.
   const past30Days = useMemo(() => {
     const days: string[] = []
     for (let i = 1; i <= 30; i++) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      days.push(formatDate(d))
+      days.push(shiftDate(today, -i))
     }
     return days
-  }, [])
+  }, [today])
 
   const statsStart = past30Days[past30Days.length - 1]
   const statsEnd = past30Days[0]
@@ -142,7 +169,7 @@ export function Dashboard() {
       <ExportReminderBanner settings={settings} />
       <DateNav date={date} onDateChange={setDate} />
 
-      {date === todayString() && stats && (stats.avg7 != null || stats.avg30 != null) && (
+      {date === today && stats && (stats.avg7 != null || stats.avg30 != null) && (
         <div class={styles.statsCard}>
           <div class={styles.statsTitle}>Average daily difference from goal</div>
           {stats.avg7 != null && (
