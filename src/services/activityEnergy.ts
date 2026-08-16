@@ -1,4 +1,4 @@
-import type { ActivityKind } from '../db/index'
+import type { ActivityKind, BurnActivity } from '../db/index'
 
 /**
  * Energy cost of an activity, always NET of resting metabolism.
@@ -13,12 +13,54 @@ import type { ActivityKind } from '../db/index'
 const RESTING_KCAL_PER_KG_MIN = (3.5 * 5) / 1000
 
 /**
- * The ACSM gait equations split oxygen cost into a horizontal and a resting
- * term: walking VO2 = 0.1*S + 3.5, running VO2 = 0.2*S + 3.5 (S in m/min).
- * Dropping the 3.5 leaves a per-km cost that speed cancels out of, so distance
- * and body mass are all we need — no pace, no duration.
+ * Net cost of walking one km, as a U-curve in speed. Slow strolling wastes energy
+ * on balance and long single-leg support; fast walking wastes it fighting the
+ * geometry of the gait. The floor sits near 4.4 km/h.
+ *
+ * The ACSM gait equation cannot express this. `VO2 = 0.1*S + 3.5` makes the per-km
+ * cost identical at every speed, which is why the flat 0.5 constant this replaces
+ * sat on the floor of the curve and understated every walk that was not close to
+ * optimal. These coefficients are a least-squares fit to the level-walking entries
+ * of the Compendium of Physical Activities, taken net of 1 MET.
+ *
+ * A check on the fit: it crosses RUN_KCAL_PER_KG_KM at 7.6 km/h, and real people
+ * change to running at about 7.0-7.5 km/h. The curve finds the gait change on its
+ * own, from data that never mentions running.
  */
-const NET_KCAL_PER_KG_KM: Record<'walk' | 'run', number> = { walk: 0.5, run: 1.0 }
+const WALK_FIT = { pivotKmh: 4.5, base: 0.53, linear: 0.009, quadratic: 0.041 }
+
+/** Outside this band the fit leaves its data, so the speed given to it is clamped. */
+const WALK_KMH_RANGE = { min: 2.5, max: 7.5 }
+
+/** Pace assumed when no duration is given — a typical adult self-selected walk. */
+const ASSUMED_WALK_KMH = 4.75
+
+/**
+ * Net cost of running one km. Unlike walking this really is near-constant across
+ * recreational speeds, so distance alone is enough and a duration adds nothing.
+ *
+ * 0.95 rather than the classic Margaria 1.0: the compendium's running entries work
+ * out at 0.90-0.98 net, so 1.0 sat at the top of the measured range while the old
+ * walking constant sat on the floor of its own. The pair overstated how much more
+ * a run costs than a walk.
+ */
+const RUN_KCAL_PER_KG_KM = 0.95
+
+/** Below this speed a "run" is really a walk, and the flat constant stops holding. */
+const MIN_RUN_KMH = 8
+
+/**
+ * Cost of climbing, per kg per vertical metre.
+ *
+ * ACSM adds a grade term alongside the horizontal one — `1.8*S*G` walking and
+ * `0.9*S*G` running, where `S*G` is simply vertical speed. That reduces to a fixed
+ * cost per metre climbed, whatever the gradient. On a hilly route this term can
+ * beat the horizontal one, which is why the field is worth asking for at all.
+ *
+ * Descent is ignored. It costs roughly a fifth of the climb, so leaving it out
+ * errs low — the direction this file always errs.
+ */
+const ASCENT_KCAL_PER_KG_M: Record<'walk' | 'run', number> = { walk: 0.009, run: 0.0045 }
 
 /**
  * Fallback max heart rate when the rider hasn't set their own. Erring high here
@@ -46,17 +88,43 @@ export interface ActivityInputs {
   kind: ActivityKind
   weightKg: number
   distanceKm?: number // walk, run
-  durationMin?: number // bike
+  durationMin?: number // bike; optional for walk (sets the pace) and run (checks it)
+  ascentM?: number // walk, run — optional
   avgHr?: number // bike
   maxHr?: number // bike, defaults to DEFAULT_MAX_HR
 }
 
-export function netWalkKcal(distanceKm: number, weightKg: number): number {
-  return NET_KCAL_PER_KG_KM.walk * weightKg * distanceKm
+/** Pace in km/h, or null when no usable duration was given. */
+function paceKmh(distanceKm: number, durationMin?: number): number | null {
+  if (!durationMin || durationMin <= 0) return null
+  return (distanceKm / durationMin) * 60
 }
 
-export function netRunKcal(distanceKm: number, weightKg: number): number {
-  return NET_KCAL_PER_KG_KM.run * weightKg * distanceKm
+/** Net kcal per kg per km of level walking, at a pace clamped to the fitted band. */
+function walkCostPerKgKm(speedKmh: number): number {
+  const v = Math.min(WALK_KMH_RANGE.max, Math.max(WALK_KMH_RANGE.min, speedKmh))
+  const d = v - WALK_FIT.pivotKmh
+  return WALK_FIT.base + WALK_FIT.linear * d + WALK_FIT.quadratic * d * d
+}
+
+export function netWalkKcal(
+  distanceKm: number,
+  weightKg: number,
+  durationMin?: number,
+  ascentM = 0,
+): number {
+  const pace = paceKmh(distanceKm, durationMin) ?? ASSUMED_WALK_KMH
+  return (
+    walkCostPerKgKm(pace) * weightKg * distanceKm +
+    ASCENT_KCAL_PER_KG_M.walk * weightKg * ascentM
+  )
+}
+
+export function netRunKcal(distanceKm: number, weightKg: number, ascentM = 0): number {
+  return (
+    RUN_KCAL_PER_KG_KM * weightKg * distanceKm +
+    ASCENT_KCAL_PER_KG_M.run * weightKg * ascentM
+  )
 }
 
 /**
@@ -94,8 +162,8 @@ export function calcNetKcal(i: ActivityInputs): number | null {
   if (i.kind === 'walk' || i.kind === 'run') {
     if (!(i.distanceKm && i.distanceKm > 0)) return null
     const kcal = i.kind === 'walk'
-      ? netWalkKcal(i.distanceKm, i.weightKg)
-      : netRunKcal(i.distanceKm, i.weightKg)
+      ? netWalkKcal(i.distanceKm, i.weightKg, i.durationMin, i.ascentM)
+      : netRunKcal(i.distanceKm, i.weightKg, i.ascentM)
     return Math.round(kcal)
   }
 
@@ -104,31 +172,87 @@ export function calcNetKcal(i: ActivityInputs): number | null {
   return Math.round(netBikeKcal(i.durationMin, i.avgHr, i.weightKg, i.maxHr))
 }
 
-/** Auto-generated entry name, e.g. "Run · 5 km" or "Bike · 45 min @ 132 bpm". */
+/**
+ * The storable record of what a calculation used, so it can be replayed later.
+ * Blank optionals are left off rather than stored as zero, so a later replay can
+ * tell "no duration given" from "a duration of nothing".
+ */
+export function toActivity(i: ActivityInputs): BurnActivity {
+  const a: BurnActivity = { kind: i.kind, weightKg: i.weightKg }
+  if (i.kind === 'bike') {
+    a.durationMin = i.durationMin
+    a.avgHr = i.avgHr
+    return a
+  }
+  a.distanceKm = i.distanceKm
+  if (i.durationMin) a.durationMin = i.durationMin
+  if (i.ascentM) a.ascentM = i.ascentM
+  return a
+}
+
+/**
+ * Auto-generated entry name, e.g. "Walk · 5 km ↑120 m" or "Bike · 45 min @ 132 bpm".
+ *
+ * For walk and run this names the route and nothing else. Recents are grouped by
+ * name, so folding in a duration would split one daily loop into a fresh row for
+ * every slightly different time and push the rest of the list off the end.
+ */
 export function activityName(i: ActivityInputs): string {
   if (i.kind === 'walk' || i.kind === 'run') {
     const label = i.kind === 'walk' ? 'Walk' : 'Run'
-    return i.distanceKm ? `${label} · ${i.distanceKm} km` : label
+    if (!i.distanceKm) return label
+    const climb = i.ascentM ? ` ↑${i.ascentM} m` : ''
+    return `${label} · ${i.distanceKm} km${climb}`
   }
   if (i.durationMin && i.avgHr) return `Bike · ${i.durationMin} min @ ${i.avgHr} bpm`
   if (i.durationMin) return `Bike · ${i.durationMin} min`
   return 'Bike'
 }
 
+const pace1dp = (kmh: number): string => kmh.toFixed(1)
+
+function walkNote(pace: number | null): { text: string; warn: boolean } {
+  if (pace === null) {
+    return {
+      text: `Assuming a typical ${ASSUMED_WALK_KMH} km/h. Add a duration to use your own pace.`,
+      warn: false,
+    }
+  }
+  if (pace > WALK_KMH_RANGE.max) {
+    return {
+      text: `${pace1dp(pace)} km/h is running pace for most people — Run fits this better.`,
+      warn: true,
+    }
+  }
+  if (pace < WALK_KMH_RANGE.min) {
+    return {
+      text: `${pace1dp(pace)} km/h is very slow — treat this as a rough figure.`,
+      warn: true,
+    }
+  }
+  return { text: `Based on your ${pace1dp(pace)} km/h pace.`, warn: false }
+}
+
+function runNote(pace: number | null): { text: string; warn: boolean } {
+  if (pace !== null && pace < MIN_RUN_KMH) {
+    return {
+      text: `${pace1dp(pace)} km/h is walking pace — Walk fits this better.`,
+      warn: true,
+    }
+  }
+  return {
+    text: 'Cost per km barely moves with pace. Outdoor drag adds ~3–5%.',
+    warn: false,
+  }
+}
+
 /** Honest note about where the estimate holds, shown under the result. */
 export function accuracyNote(i: ActivityInputs): { text: string; warn: boolean } {
-  if (i.kind === 'walk') {
-    return {
-      text: 'Valid 3–6 km/h on the flat. Very slow strolling and hills both cost more per km.',
-      warn: false,
-    }
+  if (i.kind === 'walk' || i.kind === 'run') {
+    const pace = i.distanceKm ? paceKmh(i.distanceKm, i.durationMin) : null
+    return i.kind === 'walk' ? walkNote(pace) : runNote(pace)
   }
-  if (i.kind === 'run') {
-    return {
-      text: 'Assumes ≥ 8 km/h. Outdoor drag pushes real cost ~3–5% higher.',
-      warn: false,
-    }
-  }
+
   const maxHr = i.maxHr || DEFAULT_MAX_HR
   if (i.avgHr && i.avgHr / maxHr < MIN_USEFUL_HR_FRACTION) {
     return {

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type IntakeEntry, type BurnEntry, type WeightEntry } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
-import { calcNetKcal, activityName } from '../services/activityEnergy'
+import { calcNetKcal, activityName, toActivity } from '../services/activityEnergy'
 import { NumericInput } from './NumericInput'
 import styles from './EntryList.module.css'
 
@@ -40,6 +40,7 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
   // Calculated burn edit: the activity's own inputs, recomputed on save
   const [editDistance, setEditDistance] = useState('')
   const [editDuration, setEditDuration] = useState('')
+  const [editAscent, setEditAscent] = useState('')
   const [editHr, setEditHr] = useState('')
   // Unit calories (editable for all intake types)
   const [editUnitCal, setEditUnitCal] = useState('')
@@ -56,6 +57,7 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
       weightKg: a.weightKg,
       distanceKm: parseFloat(editDistance) || 0,
       durationMin: parseInt(editDuration, 10) || 0,
+      ascentM: parseInt(editAscent, 10) || 0,
       avgHr: parseInt(editHr, 10) || 0,
       maxHr: settings?.maxHr,
     }
@@ -111,6 +113,7 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
       const a = entry.data.activity
       setEditDistance(a.distanceKm != null ? String(a.distanceKm) : '')
       setEditDuration(a.durationMin != null ? String(a.durationMin) : '')
+      setEditAscent(a.ascentM != null ? String(a.ascentM) : '')
       setEditHr(a.avgHr != null ? String(a.avgHr) : '')
     } else {
       setEditCalories(String(entry.data.calories))
@@ -135,12 +138,8 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
       const inputs = editedActivityInputs(burn)
       const calories = calcNetKcal(inputs)
       if (calories !== null && calories > 0) {
-        const activity = {
-          ...a,
-          ...(a.kind === 'bike'
-            ? { durationMin: inputs.durationMin, avgHr: inputs.avgHr }
-            : { distanceKm: inputs.distanceKm }),
-        }
+        // Rebuilt rather than merged, so clearing an optional field really drops it
+        const activity = toActivity(inputs)
         // Keep a name the user wrote themselves; refresh a generated one
         const wasGenerated = burn.name === activityName(a)
         await db.burnEntries.update(burn.id, {
@@ -358,17 +357,40 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
                       </div>
                     </>
                   ) : (
-                    <div class={styles.editRow}>
-                      <label class={styles.editLabel}>Distance</label>
-                      <NumericInput
-                        inputMode="decimal"
-                        class={styles.editInput}
-                        value={editDistance}
-                        onInput={(e) => setEditDistance((e.target as HTMLInputElement).value)}
-                        step="0.1"
-                      />
-                      <span class={styles.editUnit}>km</span>
-                    </div>
+                    <>
+                      <div class={styles.editRow}>
+                        <label class={styles.editLabel}>Distance</label>
+                        <NumericInput
+                          inputMode="decimal"
+                          class={styles.editInput}
+                          value={editDistance}
+                          onInput={(e) => setEditDistance((e.target as HTMLInputElement).value)}
+                          step="0.1"
+                        />
+                        <span class={styles.editUnit}>km</span>
+                      </div>
+                      {/* Both are optional, but they have to be editable here too:
+                          correcting a distance while a stale duration sits in the
+                          record would silently rewrite the pace behind the total. */}
+                      <div class={styles.editRow}>
+                        <label class={styles.editLabel}>Duration</label>
+                        <NumericInput
+                          class={styles.editInput}
+                          value={editDuration}
+                          onInput={(e) => setEditDuration((e.target as HTMLInputElement).value)}
+                        />
+                        <span class={styles.editUnit}>min</span>
+                      </div>
+                      <div class={styles.editRow}>
+                        <label class={styles.editLabel}>Climb</label>
+                        <NumericInput
+                          class={styles.editInput}
+                          value={editAscent}
+                          onInput={(e) => setEditAscent((e.target as HTMLInputElement).value)}
+                        />
+                        <span class={styles.editUnit}>m</span>
+                      </div>
+                    </>
                   )}
                   <div class={styles.editTotal}>
                     Burned: {calcNetKcal(editedActivityInputs(entry.data)) ?? '—'} kcal

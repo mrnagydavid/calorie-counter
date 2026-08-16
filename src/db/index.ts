@@ -43,7 +43,8 @@ export interface BurnActivity {
   kind: ActivityKind
   weightKg: number // what it was computed with, for the record
   distanceKm?: number // walk, run
-  durationMin?: number // bike
+  durationMin?: number // bike; walk and run when a pace was given
+  ascentM?: number // walk, run — climb, when the route had one
   avgHr?: number // bike
 }
 

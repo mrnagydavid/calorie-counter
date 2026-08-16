@@ -8,6 +8,7 @@ import {
   calcNetKcal,
   activityName,
   accuracyNote,
+  toActivity,
   DEFAULT_MAX_HR,
   type ActivityInputs,
 } from '../services/activityEnergy'
@@ -51,6 +52,7 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
   const [weight, setWeight] = useState('')
   const [weightTouched, setWeightTouched] = useState(false)
   const [duration, setDuration] = useState('')
+  const [ascent, setAscent] = useState('')
   const [avgHr, setAvgHr] = useState('')
   const [maxHr, setMaxHr] = useState(String(DEFAULT_MAX_HR))
   const [maxHrTouched, setMaxHrTouched] = useState(false)
@@ -96,10 +98,11 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
       weightKg: parseFloat(weight) || 0,
       distanceKm: parseFloat(distance) || 0,
       durationMin: parseInt(duration, 10) || 0,
+      ascentM: parseInt(ascent, 10) || 0,
       avgHr: parseInt(avgHr, 10) || 0,
       maxHr: parseInt(maxHr, 10) || DEFAULT_MAX_HR,
     }
-  }, [mode, weight, distance, duration, avgHr, maxHr])
+  }, [mode, weight, distance, duration, ascent, avgHr, maxHr])
 
   const netKcal = inputs ? calcNetKcal(inputs) : null
   const autoName = inputs ? activityName(inputs) : ''
@@ -152,10 +155,16 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
       return
     }
 
+    // Every field is assigned, never just filled: an absent value has to clear the
+    // box. Otherwise tapping a hilly loop and then a flat one leaves the climb
+    // behind, and the flat walk quietly collects a few hundred calories it did not
+    // earn. Weight and max HR are deliberately untouched — they describe you today,
+    // not the route, so they keep coming from the weigh-in and from settings.
     setMode(a.kind)
-    if (a.distanceKm != null) setDistance(String(a.distanceKm))
-    if (a.durationMin != null) setDuration(String(a.durationMin))
-    if (a.avgHr != null) setAvgHr(String(a.avgHr))
+    setDistance(a.distanceKm != null ? String(a.distanceKm) : '')
+    setDuration(a.durationMin != null ? String(a.durationMin) : '')
+    setAscent(a.ascentM != null ? String(a.ascentM) : '')
+    setAvgHr(a.avgHr != null ? String(a.avgHr) : '')
 
     // A stored name that is just the default keeps tracking the inputs;
     // one the user wrote themselves is preserved.
@@ -183,13 +192,7 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
 
     if (!inputs || netKcal === null) return
 
-    const activity: BurnActivity = { kind: inputs.kind, weightKg: inputs.weightKg }
-    if (inputs.kind === 'bike') {
-      activity.durationMin = inputs.durationMin
-      activity.avgHr = inputs.avgHr
-    } else {
-      activity.distanceKm = inputs.distanceKm
-    }
+    const activity = toActivity(inputs)
 
     await db.burnEntries.add({
       id: crypto.randomUUID(),
@@ -310,6 +313,46 @@ export function AddBurnPage({ date = '' }: AddBurnPageProps) {
             </div>
           </div>
           {weightField}
+
+          <div class={styles.sectionTitle}>Optional</div>
+
+          <div class={styles.section}>
+            <div class={styles.fieldLabel}>Duration</div>
+            <div class={styles.inputRow}>
+              <NumericInput
+                inputMode="numeric"
+                class={styles.calorieInput}
+                value={duration}
+                onInput={(e) => setDuration((e.target as HTMLInputElement).value)}
+                placeholder="0"
+                min="0"
+              />
+              <span class={styles.unit}>min</span>
+            </div>
+            <div class={styles.hint}>
+              {mode === 'walk'
+                ? 'Your pace changes the cost per km by up to a third.'
+                : 'Only checks that this was really a run — it does not change the total.'}
+            </div>
+          </div>
+
+          <div class={styles.section}>
+            <div class={styles.fieldLabel}>Climb</div>
+            <div class={styles.inputRow}>
+              <NumericInput
+                inputMode="numeric"
+                class={styles.calorieInput}
+                value={ascent}
+                onInput={(e) => setAscent((e.target as HTMLInputElement).value)}
+                placeholder="0"
+                min="0"
+              />
+              <span class={styles.unit}>m</span>
+            </div>
+            <div class={styles.hint}>
+              Total metres gained. Leave empty for a flat route.
+            </div>
+          </div>
         </>
       )}
 
