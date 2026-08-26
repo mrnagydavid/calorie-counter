@@ -29,7 +29,13 @@ const RESTING_KCAL_PER_KG_MIN = (3.5 * 5) / 1000
  */
 const WALK_FIT = { pivotKmh: 4.5, base: 0.53, linear: 0.009, quadratic: 0.041 }
 
-/** Outside this band the fit leaves its data, so the speed given to it is clamped. */
+/**
+ * Outside this band the fit leaves its data, so the speed given to it is clamped.
+ *
+ * This limits the model and nothing else. It used to double as the advice shown to
+ * the user, which is what let the two screens disagree. See WALK_ADVICE_KMH for why
+ * the advice needs numbers of its own.
+ */
 const WALK_KMH_RANGE = { min: 2.5, max: 7.5 }
 
 /** Pace assumed when no duration is given — a typical adult self-selected walk. */
@@ -46,8 +52,28 @@ const ASSUMED_WALK_KMH = 4.75
  */
 const RUN_KCAL_PER_KG_KM = 0.95
 
-/** Below this speed a "run" is really a walk, and the flat constant stops holding. */
-const MIN_RUN_KMH = 8
+/**
+ * When each screen suggests the other activity. Advice only — no calculation reads
+ * these, and neither one can change a calorie figure.
+ *
+ * INVARIANT: RUN_ADVICE_KMH.min <= WALK_ADVICE_KMH.max. Let them cross and every pace
+ * between them makes each screen recommend the other — the bug this replaces, where a
+ * walk limit of 7.5 sat under a run limit of 8.0. Where the two ranges overlap there
+ * is no hole in the coverage: that is the stretch where either gait is a fair answer,
+ * and both screens are right to stay quiet. They are kept adjacent here so the
+ * invariant can be checked at a glance.
+ *
+ * The two numbers differ because they come from different places. The run edge comes
+ * from the curves: below 7.25 km/h the flat run constant overstates a real walk by
+ * more than 10%, and the error climbs quickly below that. An overstated burn inflates
+ * the day's budget, so it earns a suggestion. The walk edge is a judgement about
+ * people instead. Past WALK_KMH_RANGE.max the walk cost is clamped, so a run logged as
+ * a walk lands a fixed ~2.5% low at any speed — never far out — so this edge sits at a
+ * speed few people can walk rather than at the clamp. It says the activity was picked
+ * wrong, not that the number is.
+ */
+const WALK_ADVICE_KMH = { max: 8.5 }
+const RUN_ADVICE_KMH = { min: 7.25 }
 
 /**
  * Cost of climbing, per kg per vertical metre.
@@ -218,7 +244,7 @@ function walkNote(pace: number | null): { text: string; warn: boolean } {
       warn: false,
     }
   }
-  if (pace > WALK_KMH_RANGE.max) {
+  if (pace > WALK_ADVICE_KMH.max) {
     return {
       text: `${pace1dp(pace)} km/h is running pace for most people — Run fits this better.`,
       warn: true,
@@ -234,7 +260,7 @@ function walkNote(pace: number | null): { text: string; warn: boolean } {
 }
 
 function runNote(pace: number | null): { text: string; warn: boolean } {
-  if (pace !== null && pace < MIN_RUN_KMH) {
+  if (pace !== null && pace < RUN_ADVICE_KMH.min) {
     return {
       text: `${pace1dp(pace)} km/h is walking pace — Walk fits this better.`,
       warn: true,
