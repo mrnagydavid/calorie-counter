@@ -9,6 +9,10 @@ export interface FoodFormResult {
   quantity: number
   unit: string
   saveAsCustom: boolean
+  /** Barcode to save the food under. Empty when none was scanned, or the user cleared it. */
+  barcode: string
+  /** Set when the picked food is already in My Foods, so the caller updates it instead of adding. */
+  existingCustomFoodId?: string
 }
 
 export interface FoodFormInitial {
@@ -26,10 +30,16 @@ interface FoodFormProps {
   hideUnitAndCalories?: boolean
   portions?: { desc: string; g: number }[] | null
   showSaveAsCustom?: boolean
-  /** When set, the food is already saved — hide checkbox, show label, auto-sync */
+  /** Controlled, because the barcode banner above the form shows and clears the same value. */
+  barcode?: string
+  onBarcodeChange?: (value: string) => void
+  /** Clearing is more than emptying the field: it also drops the barcode context above. */
+  onBarcodeClear?: () => void
+  /** Controlled, because clearing the barcode also unticks a tick the barcode context made. */
+  saveAsCustom?: boolean
+  onSaveAsCustomChange?: (value: boolean) => void
+  /** When set, the food is already saved — hide the name field and the checkbox. */
   existingCustomFoodId?: string
-  showNameField?: boolean
-  nameRequired?: boolean
   submitLabel?: string
   showSaveAndAddNew?: boolean
   onSubmit: (result: FoodFormResult) => void
@@ -69,9 +79,12 @@ export function FoodForm({
   hideUnitAndCalories = false,
   portions = null,
   showSaveAsCustom = false,
+  barcode = '',
+  onBarcodeChange,
+  onBarcodeClear,
+  saveAsCustom = false,
+  onSaveAsCustomChange,
   existingCustomFoodId,
-  showNameField = true,
-  nameRequired = false,
   submitLabel = 'Add',
   showSaveAndAddNew = false,
   onSubmit,
@@ -85,7 +98,6 @@ export function FoodForm({
   )
   const [quantity, setQuantity] = useState(initQuantity(initial?.unit, initial?.quantity))
   const [name, setName] = useState(initial?.name ?? '')
-  const [saveAsCustom, setSaveAsCustom] = useState(false)
 
   const cal = parseInt(unitCalories, 10) || 0
   const qty = parseFloat(quantity) || 0
@@ -94,7 +106,7 @@ export function FoodForm({
   const isTotal = unit === 'total'
   const showQuantity = !isTotal
 
-  const canSubmit = cal > 0 && (!nameRequired || name.trim().length > 0)
+  const canSubmit = cal > 0
     && (!(showSaveAsCustom && saveAsCustom) || name.trim().length > 0)
 
   const handleUnitChange = useCallback((newUnit: string) => {
@@ -112,8 +124,10 @@ export function FoodForm({
     unitCalories: cal,
     quantity: computeDbQuantity(resolvedUnit, qty),
     unit: resolvedUnit,
-    saveAsCustom,
-  }), [name, total, cal, qty, resolvedUnit, saveAsCustom])
+    saveAsCustom: existingCustomFoodId ? false : saveAsCustom,
+    barcode: barcode.trim(),
+    existingCustomFoodId,
+  }), [name, total, cal, qty, resolvedUnit, saveAsCustom, barcode, existingCustomFoodId])
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return
@@ -129,8 +143,9 @@ export function FoodForm({
     setUnitCalories('')
     setQuantity('100')
     setName('')
-    setSaveAsCustom(false)
-  }, [canSubmit, buildResult, onSaveAndAddNew])
+    onSaveAsCustomChange?.(false)
+    onBarcodeChange?.('')
+  }, [canSubmit, buildResult, onSaveAndAddNew, onSaveAsCustomChange, onBarcodeChange])
 
   const handlePortionTap = useCallback((portion: { desc: string; g: number }) => {
     setQuantity(String(portion.g))
@@ -242,7 +257,7 @@ export function FoodForm({
       <div class={styles.total}>Total: {total} kcal</div>
 
       {/* Name */}
-      {showNameField && !existingCustomFoodId && (
+      {!existingCustomFoodId && (
         <div class={styles.section}>
           <div class={styles.fieldLabel}>
             Name {showSaveAsCustom && saveAsCustom ? <span class={styles.required}>*</span> : '(optional)'}
@@ -264,11 +279,35 @@ export function FoodForm({
             type="checkbox"
             id="ffSaveCustom"
             checked={saveAsCustom}
-            onChange={(e) => setSaveAsCustom((e.target as HTMLInputElement).checked)}
+            onChange={(e) => onSaveAsCustomChange?.((e.target as HTMLInputElement).checked)}
           />
           <label for="ffSaveCustom">Save as custom food</label>
         </div>
         <div class={styles.checkboxHint}>All entries are available under "Recents" <em>for a while</em>. A saved custom food is available under "My foods" <em>forever</em>.</div>
+        <div class={styles.section}>
+          <div class={styles.fieldLabel}>Save under this barcode (optional)</div>
+          <div class={styles.inputRow}>
+            <input
+              type="text"
+              inputMode="numeric"
+              class={styles.barcodeInput}
+              value={barcode}
+              onInput={(e) => onBarcodeChange?.((e.target as HTMLInputElement).value)}
+              placeholder="e.g. 7622210100234"
+            />
+            {barcode.length > 0 && (
+              <button
+                class={styles.clearButton}
+                onClick={() => (onBarcodeClear ?? (() => onBarcodeChange?.('')))()}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div class={styles.fieldHint}>
+            Kept only if the food is saved to My Foods. A later scan then finds it, with no lookup.
+          </div>
+        </div>
       </>)}
 
       {showSaveAndAddNew && onSaveAndAddNew && (

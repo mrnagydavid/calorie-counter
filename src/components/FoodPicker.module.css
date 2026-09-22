@@ -142,6 +142,30 @@
 }
 
 /* Search info banner */
+/* Same chip as .searchInfo — both say "this is set, here is how to unset it".
+   The text is not interactive here, so it carries no underline. */
+.barcodeInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: #ecfdf5;
+  border: 1px solid var(--color-primary);
+}
+
+.barcodeInfoText {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-primary-dark);
+}
+
+.barcodeInfoCode {
+  font-family: monospace;
+}
+
 .searchInfo {
   display: flex;
   align-items: center;

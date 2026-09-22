@@ -5,7 +5,6 @@ import { db } from '../db/index'
 import { lookupBarcode, type CalorieVariant, type OFFProduct, type LookupError } from '../services/openfoodfacts'
 import { isValidBarcode, supportsNativeBarcodeDetector } from '../services/barcodeDetector'
 import { NativeBarcodeScanner } from './NativeBarcodeScanner'
-import { FoodForm, type FoodFormResult } from './FoodForm'
 import styles from './BarcodeScanner.module.css'
 import { NumericInput } from './NumericInput'
 
@@ -47,12 +46,17 @@ interface BarcodeScannerProps {
   onClose: () => void
   /** If provided, calls this instead of saving to DB */
   onAddEntry?: (entry: ScannedEntry) => void
+  /**
+   * Picker mode only: the lookup gave nothing and the user will enter the food by hand.
+   * `presetSaveAsCustom` is true only after a real miss, so a timeout can't silently
+   * shadow a product that Open Food Facts does have.
+   */
+  onAddManually?: (barcode: string, presetSaveAsCustom: boolean) => void
 }
 
 type State =
   | { step: 'scanning'; loading: boolean }
-  | { step: 'found'; product: OFFProduct; barcode: string; customFoodId?: string }
-  | { step: 'editing'; product: OFFProduct; barcode: string; customFoodId: string }
+  | { step: 'found'; product: OFFProduct; barcode: string }
   | { step: 'not-found'; barcode: string }
   | { step: 'lookup-error'; barcode: string; error: LookupError }
   | { step: 'error'; message: string }
@@ -71,7 +75,7 @@ function variantLabel(v: CalorieVariant): string {
   return base
 }
 
-export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProps) {
+export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: BarcodeScannerProps) {
   const [state, setState] = useState<State>({ step: 'scanning', loading: false })
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [amount, setAmount] = useState('100')
@@ -128,7 +132,6 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
             unit: customFood.unit as CalorieVariant['unit'],
           }],
         },
-        customFoodId: customFood.id,
       })
       setSelectedIdx(0)
       if (isCustomCountBased) {
@@ -178,6 +181,8 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
       setServingQty(1)
       return
     }
+
+    setManualBarcode(barcode)
 
     if (result.error === 'not-found') {
       setState({ step: 'not-found', barcode })
@@ -254,86 +259,55 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
 
   const handleNotFoundAdd = useCallback(() => {
     if (state.step !== 'not-found' && state.step !== 'lookup-error') return
-    // When used inside FoodPicker (onAddEntry provided), just close — the user
-    // returns to FoodPicker and enters data manually there.
+    // The field is the source of truth: the user may have corrected it, or cleared it to add
+    // the food with no barcode at all.
+    const barcode = manualBarcode.trim()
+    // A miss means the product isn't in Open Food Facts, so saving it is the point of the
+    // flow — tick the box for the user. A timeout says nothing about the product, so don't.
+    // With no barcode there is nothing to save it under, so leave the box alone.
+    const presetSaveAsCustom = state.step === 'not-found' && barcode.length > 0
     if (onAddEntry) {
+      onAddManually?.(barcode, presetSaveAsCustom)
       onClose()
     } else {
       onClose()
-      route(`/add-intake/${date}?barcode=${state.barcode}`)
+      const params = new URLSearchParams()
+      if (barcode) params.set('barcode', barcode)
+      if (presetSaveAsCustom) params.set('save', '1')
+      const query = params.toString()
+      route(`/add-intake/${date}${query ? `?${query}` : ''}`)
     }
-  }, [state, date, onClose, onAddEntry])
+  }, [state, manualBarcode, date, onClose, onAddEntry, onAddManually])
+
+  const submitManualBarcode = useCallback((e: Event) => {
+    e.preventDefault()
+    if (isValidBarcode(manualBarcode)) handleBarcode(manualBarcode.trim())
+  }, [manualBarcode, handleBarcode])
+
+  // With no camera there is nothing else to do on the screen, so put the cursor in the field.
+  const errorInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (state.step === 'error') errorInputRef.current?.focus()
+  }, [state.step])
+
+  const handleScanAgain = useCallback(() => {
+    setManualBarcode('')
+    setState({ step: 'scanning', loading: false })
+  }, [])
 
   const handleClose = useCallback(() => {
     onClose()
   }, [onClose])
 
-  const handleEditCustomFood = useCallback(() => {
-    if (state.step !== 'found' || !state.customFoodId) return
-    setState({
-      step: 'editing',
-      product: state.product,
-      barcode: state.barcode,
-      customFoodId: state.customFoodId,
-    })
-  }, [state])
-
-  const handleEditSave = useCallback(async (result: FoodFormResult) => {
-    if (state.step !== 'editing') return
-    const { barcode, customFoodId } = state
-
-    // Update the custom food in DB
-    await db.customFoods.update(customFoodId, {
-      name: result.name,
-      caloriesPerUnit: result.unitCalories,
-      unit: result.unit,
-      lastUsed: new Date().toISOString(),
-    })
-
-    // Return to found screen with updated data
-    const isUpdatedCountBased = result.unit === 'serving' || result.unit === 'total' || result.unit === 'piece'
-    setState({
-      step: 'found',
-      barcode,
-      product: {
-        name: result.name,
-        variants: [{
-          kcal: result.unitCalories,
-          unit: result.unit as CalorieVariant['unit'],
-        }],
-      },
-      customFoodId,
-    })
-    setSelectedIdx(0)
-    if (isUpdatedCountBased) {
-      setServingQty(1)
-    } else {
-      setAmount('100')
-    }
-  }, [state])
-
-  const handleEditCancel = useCallback(() => {
-    if (state.step !== 'editing') return
-    // Return to found screen with original data
-    setState({
-      step: 'found',
-      barcode: state.barcode,
-      product: state.product,
-      customFoodId: state.customFoodId,
-    })
-  }, [state])
-
   return (
     <div class={styles.overlay}>
       <div class={styles.header}>
-        <button class={styles.backButton} onClick={state.step === 'editing' ? handleEditCancel : handleClose}>
+        <button class={styles.backButton} onClick={handleClose}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <h1 class={styles.headerTitle}>
-          {state.step === 'editing' ? 'Edit Food' : 'Scan Barcode'}
-        </h1>
+        <h1 class={styles.headerTitle}>Scan Barcode</h1>
       </div>
 
       <div class={styles.body}>
@@ -360,13 +334,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                 )}
                 <div class={styles.hint}>Point camera at a barcode</div>
                 <div class={styles.orDivider}>or enter the number</div>
-                <form
-                  class={styles.manualRow}
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    if (isValidBarcode(manualBarcode)) handleBarcode(manualBarcode.trim())
-                  }}
-                >
+                <form class={styles.manualRow} onSubmit={submitManualBarcode}>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -422,12 +390,6 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                   </div>
                 )}
               </div>
-            )}
-
-            {state.customFoodId && (
-              <button class={styles.editLink} onClick={handleEditCustomFood}>
-                ✏️ Edit food definition
-              </button>
             )}
 
             {isCountBased ? (
@@ -498,25 +460,42 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
           </>
         )}
 
-        {state.step === 'editing' && (
-          <FoodForm
-            initial={{
-              name: state.product.name,
-              unit: state.product.variants[0].unit,
-              unitCalories: state.product.variants[0].kcal,
-            }}
-            showNameField
-            nameRequired
-            submitLabel="Save"
-            onSubmit={handleEditSave}
-          />
-        )}
-
         {state.step === 'error' && (
           <>
             <div class={styles.notFoundText}>{state.message}</div>
-            <div>
+            <form onSubmit={submitManualBarcode}>
               <div class={styles.fieldLabel}>Enter barcode manually</div>
+              <div class={styles.inputRow}>
+                <input
+                  ref={errorInputRef}
+                  type="text"
+                  inputMode="numeric"
+                  class={styles.amountInput}
+                  value={manualBarcode}
+                  onInput={(e) => setManualBarcode((e.target as HTMLInputElement).value)}
+                  placeholder="e.g. 7622210100234"
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <button
+                type="submit"
+                class={`${styles.primaryButton} ${styles.manualSubmit}`}
+                disabled={!isValidBarcode(manualBarcode)}
+              >
+                Look Up
+              </button>
+            </form>
+          </>
+        )}
+
+        {state.step === 'not-found' && (
+          <>
+            <div class={styles.notFoundText}>No product found for this barcode</div>
+            <button class={styles.secondaryButton} onClick={handleScanAgain}>
+              Scan Again
+            </button>
+            <div class={styles.orDivider}>or</div>
+            <form class={styles.actions} onSubmit={submitManualBarcode}>
               <div class={styles.inputRow}>
                 <input
                   type="text"
@@ -528,52 +507,23 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                   style={{ flex: 1 }}
                 />
               </div>
-            </div>
-            <button
-              class={styles.primaryButton}
-              disabled={!isValidBarcode(manualBarcode)}
-              onClick={() => handleBarcode(manualBarcode.trim())}
-            >
-              Look Up
-            </button>
-          </>
-        )}
-
-        {state.step === 'not-found' && (
-          <>
-            <div class={styles.notFoundText}>
-              No product found for barcode{' '}
-              <span class={styles.notFoundBarcode}>{state.barcode}</span>
-            </div>
+              {/* Only a retail-length number can be in Open Food Facts, so the search is gated.
+                  Saving a food under an in-store or custom code is not. */}
+              <button
+                type="submit"
+                class={styles.secondaryButton}
+                disabled={!isValidBarcode(manualBarcode)}
+              >
+                Search this barcode
+              </button>
+            </form>
             <div class={styles.actions}>
               <button class={styles.primaryButton} onClick={handleNotFoundAdd}>
-                Add Manually
-              </button>
-              <button class={styles.secondaryButton} onClick={() => {
-                setState({ step: 'scanning', loading: false })
-              }}>
-                Scan Again
+                {manualBarcode.trim()
+                  ? 'Add food with this barcode'
+                  : 'Add food without a barcode'}
               </button>
             </div>
-            <div class={styles.orDivider}>or enter barcode manually</div>
-            <div class={styles.inputRow}>
-              <input
-                type="text"
-                inputMode="numeric"
-                class={styles.amountInput}
-                value={manualBarcode}
-                onInput={(e) => setManualBarcode((e.target as HTMLInputElement).value)}
-                placeholder="e.g. 7622210100234"
-                style={{ flex: 1 }}
-              />
-            </div>
-            <button
-              class={styles.primaryButton}
-              disabled={!isValidBarcode(manualBarcode)}
-              onClick={() => handleBarcode(manualBarcode.trim())}
-            >
-              Search this barcode
-            </button>
           </>
         )}
 
@@ -589,11 +539,9 @@ export function BarcodeScanner({ date, onClose, onAddEntry }: BarcodeScannerProp
                 Retry
               </button>
               <button class={styles.secondaryButton} onClick={handleNotFoundAdd}>
-                Add Manually
+                Add food for this barcode
               </button>
-              <button class={styles.secondaryButton} onClick={() => {
-                setState({ step: 'scanning', loading: false })
-              }}>
+              <button class={styles.secondaryButton} onClick={handleScanAgain}>
                 Scan Again
               </button>
             </div>

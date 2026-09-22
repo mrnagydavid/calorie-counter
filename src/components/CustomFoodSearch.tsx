@@ -6,6 +6,7 @@ import { sortCustomFoods, type SortMode } from '../utils/sortCustomFoods'
 import styles from './CustomFoodSearch.module.css'
 
 export interface CustomFoodResult {
+  id: string
   name: string
   caloriesPerUnit: number
   unit: string
@@ -97,6 +98,7 @@ export function CustomFoodSearch({ onSelect, onClose, initialQuery = '' }: Custo
               <button
                 class={styles.resultItem}
                 onClick={() => onSelect({
+                  id: food.id,
                   name: food.name,
                   caloriesPerUnit: food.caloriesPerUnit,
                   unit: food.unit,

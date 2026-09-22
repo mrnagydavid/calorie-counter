@@ -16,6 +16,10 @@ interface FoodPickerProps {
   showSaveAsCustom?: boolean
   submitLabel?: string
   showSaveAndAddNew?: boolean
+  /** Seeds the form's barcode field, for callers that arrive with one (e.g. a scan route). */
+  initialBarcode?: string
+  /** Seeds the form's "save as custom food" tick. */
+  initialSaveAsCustom?: boolean
 }
 
 interface RecentFood {
@@ -44,6 +48,8 @@ export function FoodPicker({
   showSaveAsCustom = false,
   submitLabel = 'Add',
   showSaveAndAddNew = false,
+  initialBarcode = '',
+  initialSaveAsCustom = false,
 }: FoodPickerProps) {
   const [searching, setSearching] = useState(false)
   const [searchingCustom, setSearchingCustom] = useState(false)
@@ -54,6 +60,30 @@ export function FoodPicker({
   // and bump formKey to remount FoodForm with new initial values.
   const [formFill, setFormFill] = useState<FormFill | null>(null)
   const [formKey, setFormKey] = useState(0)
+  // The barcode, and whether it arrived from a scan. The banner shows while a scan supplied
+  // it; a barcode the user types by hand is just a field value and raises no banner.
+  const [barcode, setBarcode] = useState(initialBarcode)
+  const [barcodeFromScan, setBarcodeFromScan] = useState(initialBarcode.length > 0)
+  const [saveAsCustom, setSaveAsCustom] = useState(initialSaveAsCustom)
+  // Clearing the barcode only unticks a tick the scan made, never one the user made.
+  const [scanTickedSave, setScanTickedSave] = useState(initialSaveAsCustom)
+
+  const handleSaveAsCustomChange = useCallback((value: boolean) => {
+    setSaveAsCustom(value)
+    // Once the user touches it, the tick is theirs to keep.
+    setScanTickedSave(false)
+  }, [])
+
+  const clearBarcode = useCallback(() => {
+    setBarcode('')
+    setBarcodeFromScan(false)
+    if (scanTickedSave) setSaveAsCustom(false)
+    setScanTickedSave(false)
+  }, [scanTickedSave])
+
+  const handleBarcodeChange = useCallback((value: string) => {
+    setBarcode(value)
+  }, [])
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const unitRef = useRef<HTMLDivElement>(null)
@@ -116,6 +146,7 @@ export function FoodPicker({
       unitCalories: result.caloriesPerUnit,
       unit: result.unit,
       quantity: qty,
+      customFoodId: result.id,
     })
     setSearchingCustom(false)
   }, [applyFill])
@@ -136,8 +167,20 @@ export function FoodPicker({
       quantity: qty,
       portions: entry.portions || null,
     })
+    setBarcode(entry.barcode)
+    setBarcodeFromScan(entry.barcode.length > 0)
     setScanning(false)
   }, [applyFill])
+
+  const handleAddManually = useCallback((scanned: string, presetSave: boolean) => {
+    setBarcode(scanned)
+    setBarcodeFromScan(scanned.length > 0)
+    if (presetSave) {
+      setSaveAsCustom(true)
+      setScanTickedSave(true)
+    }
+    setScanning(false)
+  }, [])
 
   const handleRecentTap = useCallback(async (item: RecentFood) => {
     let qty: number
@@ -171,9 +214,11 @@ export function FoodPicker({
   const handleSaveAndAddNew = useCallback((result: FoodFormResult) => {
     onSelect(result)
     setFormFill(null)
+    clearBarcode()
+    setSaveAsCustom(false)
     setFormKey((k) => k + 1)
     bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [onSelect])
+  }, [onSelect, clearBarcode])
 
   return (
     <div class={styles.overlay}>
@@ -188,6 +233,17 @@ export function FoodPicker({
         </div>
 
         <div class={styles.body} ref={bodyRef}>
+          {/* Why the user is here: the scan found nothing, and this is the number it read. */}
+          {barcodeFromScan && barcode.length > 0 && (
+            <div class={styles.barcodeInfo}>
+              <span class={styles.barcodeInfoText}>
+                Adding an entry for barcode{' '}
+                <span class={styles.barcodeInfoCode}>{barcode}</span>
+              </span>
+              <button class={styles.searchInfoClear} onClick={clearBarcode}>Clear</button>
+            </div>
+          )}
+
           {/* Search buttons */}
           {!formFill && (
             <div class={styles.section}>
@@ -201,9 +257,11 @@ export function FoodPicker({
                     My foods
                   </button>
                 )}
-                <button class={styles.searchButton} onClick={() => setScanning(true)}>
-                  Barcode
-                </button>
+                {!barcodeFromScan && (
+                  <button class={styles.searchButton} onClick={() => setScanning(true)}>
+                    Barcode
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -259,6 +317,11 @@ export function FoodPicker({
             hideUnitAndCalories={!!formFill}
             portions={formFill?.portions ?? null}
             showSaveAsCustom={showSaveAsCustom}
+            barcode={barcode}
+            onBarcodeChange={handleBarcodeChange}
+            onBarcodeClear={clearBarcode}
+            saveAsCustom={saveAsCustom}
+            onSaveAsCustomChange={handleSaveAsCustomChange}
             existingCustomFoodId={formFill?.customFoodId}
             submitLabel={submitLabel}
             showSaveAndAddNew={showSaveAndAddNew}
@@ -294,6 +357,7 @@ export function FoodPicker({
             date={date}
             onClose={() => setScanning(false)}
             onAddEntry={handleScannedEntry}
+            onAddManually={handleAddManually}
           />
         )}
       </div>
