@@ -284,30 +284,30 @@ export function FoodForm({
           <label for="ffSaveCustom">Save as custom food</label>
         </div>
         <div class={styles.checkboxHint}>All entries are available under "Recents" <em>for a while</em>. A saved custom food is available under "My foods" <em>forever</em>.</div>
-        <div class={styles.section}>
-          <div class={styles.fieldLabel}>Save under this barcode (optional)</div>
-          <div class={styles.inputRow}>
-            <input
-              type="text"
-              inputMode="numeric"
-              class={styles.barcodeInput}
-              value={barcode}
-              onInput={(e) => onBarcodeChange?.((e.target as HTMLInputElement).value)}
-              placeholder="e.g. 7622210100234"
-            />
-            {barcode.length > 0 && (
-              <button
-                class={styles.clearButton}
-                onClick={() => (onBarcodeClear ?? (() => onBarcodeChange?.('')))()}
-              >
-                Clear
-              </button>
-            )}
+        {/* A barcode is only kept on a saved food, so the field appears only when the tick is on. */}
+        {saveAsCustom && (
+          <div class={styles.section}>
+            <div class={styles.fieldLabel}>Save under this barcode (optional)</div>
+            <div class={styles.inputRow}>
+              <input
+                type="text"
+                inputMode="numeric"
+                class={styles.barcodeInput}
+                value={barcode}
+                onInput={(e) => onBarcodeChange?.((e.target as HTMLInputElement).value)}
+                placeholder="e.g. 7622210100234"
+              />
+              {barcode.length > 0 && (
+                <button
+                  class={styles.clearButton}
+                  onClick={() => (onBarcodeClear ?? (() => onBarcodeChange?.('')))()}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
-          <div class={styles.fieldHint}>
-            Kept only if the food is saved to My Foods. A later scan then finds it, with no lookup.
-          </div>
-        </div>
+        )}
       </>)}
 
       {showSaveAndAddNew && onSaveAndAddNew && (

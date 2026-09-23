@@ -214,9 +214,3 @@
 .clearButton:hover {
   background: var(--color-border);
 }
-
-.fieldHint {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  line-height: 1.4;
-}
