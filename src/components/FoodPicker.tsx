@@ -39,6 +39,8 @@ interface FormFill {
   isLiquid?: boolean
   searchQuery?: string
   customFoodId?: string
+  /** The scan found this food, so its banner already stands for the barcode. */
+  foundByBarcode?: boolean
 }
 
 export function FoodPicker({
@@ -166,6 +168,7 @@ export function FoodPicker({
       unit: entry.unit,
       quantity: qty,
       portions: entry.portions || null,
+      foundByBarcode: true,
     })
     setBarcode(entry.barcode)
     setBarcodeFromScan(entry.barcode.length > 0)
@@ -234,7 +237,7 @@ export function FoodPicker({
 
         <div class={styles.body} ref={bodyRef}>
           {/* Why the user is here: the scan found nothing, and this is the number it read. */}
-          {barcodeFromScan && barcode.length > 0 && (
+          {barcodeFromScan && barcode.length > 0 && !formFill?.foundByBarcode && (
             <div class={styles.barcodeInfo}>
               <span class={styles.barcodeInfoText}>
                 Adding an entry for barcode{' '}
