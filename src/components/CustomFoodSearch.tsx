@@ -11,6 +11,7 @@ export interface CustomFoodResult {
   caloriesPerUnit: number
   unit: string
   nutrients?: Nutrients
+  barcode?: string
 }
 
 interface CustomFoodSearchProps {
@@ -104,6 +105,7 @@ export function CustomFoodSearch({ onSelect, onClose, initialQuery = '' }: Custo
                   caloriesPerUnit: food.caloriesPerUnit,
                   unit: food.unit,
                   nutrients: food.nutrients,
+                  barcode: food.barcode,
                 })}
               >
                 <div class={styles.resultName}>{food.name}</div>

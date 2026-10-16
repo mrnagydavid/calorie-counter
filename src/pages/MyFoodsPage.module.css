@@ -94,7 +94,7 @@
   color: var(--color-text-secondary);
 }
 
-.deleteButton {
+.iconButton {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,7 +107,7 @@
   color: var(--color-text-secondary);
 }
 
-.deleteButton svg {
+.iconButton svg {
   width: 18px;
   height: 18px;
 }

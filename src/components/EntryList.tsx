@@ -4,6 +4,7 @@ import { db, type IntakeEntry, type BurnEntry, type WeightEntry } from '../db/in
 import { getOrCreateSettings } from '../db/settings'
 import { calcNetKcal, activityName, toActivity } from '../services/activityEnergy'
 import { NumericInput } from './NumericInput'
+import { EntryEditor } from './EntryEditor'
 import styles from './EntryList.module.css'
 
 interface EntryListProps {
@@ -21,20 +22,12 @@ function formatTime(iso: string): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-function isWeightUnit(unit: string): boolean {
-  return unit === '100g' || unit === '100ml'
-}
-
 const WEIGHT_ID = '__weight__'
 
 export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  // Weight-based edit (100g/100ml): amount in g/ml
-  const [editAmount, setEditAmount] = useState('')
-  // Quantity-based edit (serving/piece/unknown): quantity as string for free input
-  const [editQty, setEditQty] = useState('')
   // Burn edit
   const [editCalories, setEditCalories] = useState('')
   // Calculated burn edit: the activity's own inputs, recomputed on save
@@ -42,8 +35,6 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
   const [editDuration, setEditDuration] = useState('')
   const [editAscent, setEditAscent] = useState('')
   const [editHr, setEditHr] = useState('')
-  // Unit calories (editable for all intake types)
-  const [editUnitCal, setEditUnitCal] = useState('')
   // Weight edit
   const [editWeight, setEditWeight] = useState('')
 
@@ -100,16 +91,9 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
 
   const startEdit = (entry: MergedEntry) => {
     setEditingId(entry.data.id)
-    if (entry.type === 'intake') {
-      const d = entry.data
-      setEditUnitCal(String(d.unitCalories))
-      if (isWeightUnit(d.unit)) {
-        // Convert quantity back to grams/ml: quantity is amount/100
-        setEditAmount(String(Math.round(d.quantity * 100)))
-      } else {
-        setEditQty(String(d.quantity))
-      }
-    } else if (entry.data.activity) {
+    // An intake opens a full-screen editor with its own state
+    if (entry.type === 'intake') return
+    if (entry.data.activity) {
       const a = entry.data.activity
       setEditDistance(a.distanceKm != null ? String(a.distanceKm) : '')
       setEditDuration(a.durationMin != null ? String(a.durationMin) : '')
@@ -121,18 +105,8 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
   }
 
   const saveEdit = async (entry: MergedEntry) => {
-    if (entry.type === 'intake') {
-      const d = entry.data
-      const unitCal = parseFloat(editUnitCal) || 0
-      let quantity: number
-      if (isWeightUnit(d.unit)) {
-        quantity = (parseFloat(editAmount) || 0) / 100
-      } else {
-        quantity = parseFloat(editQty) || 0
-      }
-      const calories = Math.round(unitCal * quantity)
-      await db.intakeEntries.update(d.id, { unitCalories: unitCal, quantity, calories })
-    } else if (entry.data.activity) {
+    if (entry.type === 'intake') return // saved by the intake editor
+    if (entry.data.activity) {
       const burn = entry.data
       const a = burn.activity!
       const inputs = editedActivityInputs(burn)
@@ -162,22 +136,13 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
     setEditingId(null)
   }
 
+  const closeIntakeEditor = useCallback(() => {
+    setEditingId(null)
+    setExpandedId(null)
+  }, [])
+
   if (merged.length === 0 && !weightEntry) {
     return <div class={styles.empty}>No entries yet. Tap + to add one.</div>
-  }
-
-  const computeEditTotal = (entry: IntakeEntry): number => {
-    const unitCal = parseFloat(editUnitCal) || 0
-    if (isWeightUnit(entry.unit)) {
-      return Math.round(unitCal * (parseFloat(editAmount) || 0) / 100)
-    }
-    return Math.round(unitCal * (parseFloat(editQty) || 0))
-  }
-
-  const unitSuffix = (unit: string): string => {
-    if (unit === '100g') return 'g'
-    if (unit === '100ml') return 'ml'
-    return ''
   }
 
   return (
@@ -264,73 +229,8 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
                 </div>
               )}
 
-              {isEditing && entry.type === 'intake' && isWeightUnit(entry.data.unit) && (
-                <div class={styles.editForm}>
-                  <div class={styles.editRow}>
-                    <label class={styles.editLabel}>Per {entry.data.unit}</label>
-                    <NumericInput
-                      class={styles.editInput}
-                      value={editUnitCal}
-                      onInput={(e) => setEditUnitCal((e.target as HTMLInputElement).value)}
-                    />
-                    <span class={styles.editUnit}>kcal</span>
-                  </div>
-                  <div class={styles.editRow}>
-                    <label class={styles.editLabel}>Amount</label>
-                    <NumericInput
-                      class={styles.editInput}
-                      value={editAmount}
-                      onInput={(e) => setEditAmount((e.target as HTMLInputElement).value)}
-                    />
-                    <span class={styles.editUnit}>{unitSuffix(entry.data.unit)}</span>
-                  </div>
-                  <div class={styles.editTotal}>
-                    Total: {computeEditTotal(entry.data)} kcal
-                  </div>
-                  <div class={styles.editActions}>
-                    <button class={styles.cancelButton} onClick={cancelEdit}>Cancel</button>
-                    <button class={styles.saveButton} onClick={() => saveEdit(entry)}>Save</button>
-                  </div>
-                </div>
-              )}
-
-              {isEditing && entry.type === 'intake' && !isWeightUnit(entry.data.unit) && (
-                <div class={styles.editForm}>
-                  <div class={styles.editRow}>
-                    <label class={styles.editLabel}>Per unit</label>
-                    <NumericInput
-                      class={styles.editInput}
-                      value={editUnitCal}
-                      onInput={(e) => setEditUnitCal((e.target as HTMLInputElement).value)}
-                    />
-                    <span class={styles.editUnit}>kcal</span>
-                  </div>
-                  <div class={styles.editRow}>
-                    <label class={styles.editLabel}>Qty</label>
-                    <div class={styles.stepper}>
-                      <button class={styles.stepperBtn} onClick={() => {
-                        const v = Math.max(0.5, (parseFloat(editQty) || 1) - 0.5)
-                        setEditQty(String(v))
-                      }}>-</button>
-                      <NumericInput
-                        class={styles.stepperInput}
-                        value={editQty}
-                        onInput={(e) => setEditQty((e.target as HTMLInputElement).value)}
-                      />
-                      <button class={styles.stepperBtn} onClick={() => {
-                        const v = (parseFloat(editQty) || 0) + 0.5
-                        setEditQty(String(v))
-                      }}>+</button>
-                    </div>
-                  </div>
-                  <div class={styles.editTotal}>
-                    Total: {computeEditTotal(entry.data)} kcal
-                  </div>
-                  <div class={styles.editActions}>
-                    <button class={styles.cancelButton} onClick={cancelEdit}>Cancel</button>
-                    <button class={styles.saveButton} onClick={() => saveEdit(entry)}>Save</button>
-                  </div>
-                </div>
+              {isEditing && entry.type === 'intake' && (
+                <EntryEditor entry={entry.data} onClose={closeIntakeEditor} />
               )}
 
               {isEditing && entry.type === 'burn' && entry.data.activity && (

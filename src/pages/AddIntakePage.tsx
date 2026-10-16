@@ -1,6 +1,7 @@
 import { useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { db } from '../db/index'
+import { applyCustomFoodAction } from '../db/customFoods'
 import { entryNutrients } from '../utils/nutrients'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 
@@ -33,23 +34,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       createdAt: new Date().toISOString(),
     })
 
-    if (result.existingCustomFoodId) {
-      // The user picked a food that is already in My Foods, so the only thing to write is
-      // the barcode — its calories and name stay as saved. An existing code is replaced.
-      if (barcode) {
-        await db.customFoods.update(result.existingCustomFoodId, { barcode })
-      }
-    } else if (result.saveAsCustom && result.name.trim()) {
-      await db.customFoods.put({
-        id: crypto.randomUUID(),
-        name: result.name.trim(),
-        caloriesPerUnit: result.unitCalories,
-        unit: result.unit,
-        nutrients: result.unitNutrients ?? {},
-        barcode,
-        lastUsed: new Date().toISOString(),
-      })
-    }
+    await applyCustomFoodAction(result)
   }, [date])
 
   const handleClose = useCallback(() => {

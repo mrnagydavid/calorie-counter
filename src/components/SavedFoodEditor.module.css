@@ -1,0 +1,17 @@
+/* Same size as the Save button above it, but quiet: a delete should not look like the main action. */
+.deleteButton {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.deleteButton:active,
+.deleteConfirm {
+  color: var(--color-red);
+  border-color: var(--color-red);
+}

@@ -187,6 +187,12 @@
   text-underline-offset: 2px;
 }
 
+.searchInfoActions {
+  display: flex;
+  gap: 6px;
+  margin-left: 10px;
+}
+
 .searchInfoClear {
   font-size: 13px;
   color: var(--color-text-secondary);

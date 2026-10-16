@@ -43,6 +43,8 @@ interface FormFill {
   isLiquid?: boolean
   searchQuery?: string
   customFoodId?: string
+  /** The barcode of the saved food. Edit puts it in the field, as the tick then stands for that food. */
+  barcode?: string
   /** The scan found this food, so its banner already stands for the barcode. */
   foundByBarcode?: boolean
 }
@@ -66,6 +68,8 @@ export function FoodPicker({
   // and bump formKey to remount FoodForm with new initial values.
   const [formFill, setFormFill] = useState<FormFill | null>(null)
   const [formKey, setFormKey] = useState(0)
+  // Edit on the banner shows the full form for the picked food. The short form is the default.
+  const [editing, setEditing] = useState(false)
   // The barcode, and whether it arrived from a scan. The banner shows while a scan supplied
   // it; a barcode the user types by hand is just a field value and raises no banner.
   const [barcode, setBarcode] = useState(initialBarcode)
@@ -128,6 +132,9 @@ export function FoodPicker({
   const applyFill = useCallback((fill: FormFill) => {
     setFormFill(fill)
     setFormKey((k) => k + 1)
+    setEditing(false)
+    // The tick stands for the saved food. It shows only after Edit.
+    if (fill.customFoodId) setSaveAsCustom(true)
     scrollToUnit()
   }, [scrollToUnit])
 
@@ -156,6 +163,7 @@ export function FoodPicker({
       quantity: qty,
       nutrients: result.nutrients,
       customFoodId: result.id,
+      barcode: result.barcode,
     })
     setSearchingCustom(false)
   }, [applyFill])
@@ -226,13 +234,26 @@ export function FoodPicker({
       quantity: qty,
       nutrients,
       customFoodId: match?.id,
+      barcode: match?.barcode,
     })
   }, [applyFill])
 
+  const startEdit = useCallback(() => {
+    setEditing(true)
+    // A scanned code stays: it is the one to save the food under
+    if (formFill?.customFoodId && !barcodeFromScan) setBarcode(formFill.barcode ?? '')
+  }, [formFill, barcodeFromScan])
+
   const clearSearch = useCallback(() => {
+    if (formFill?.customFoodId) {
+      // Undo what the saved food set: its tick (a scan's own tick stays) and its barcode
+      setSaveAsCustom(scanTickedSave)
+      if (!barcodeFromScan) setBarcode('')
+    }
     setFormFill(null)
     setFormKey((k) => k + 1)
-  }, [])
+    setEditing(false)
+  }, [formFill, scanTickedSave, barcodeFromScan])
 
   const handleSubmit = useCallback((result: FoodFormResult) => {
     onSelect(result)
@@ -242,6 +263,7 @@ export function FoodPicker({
   const handleSaveAndAddNew = useCallback((result: FoodFormResult) => {
     onSelect(result)
     setFormFill(null)
+    setEditing(false)
     clearBarcode()
     setSaveAsCustom(false)
     setFormKey((k) => k + 1)
@@ -321,9 +343,13 @@ export function FoodPicker({
                   class={styles.searchInfoText}
                   onClick={() => formFill.searchQuery !== undefined && setSearching(true)}
                 >
-                  {formFill.name} · {formFill.unitCalories} kcal/{formFill.unit === '100ml' ? '100ml' : '100g'}
+                  {/* After Edit the kcal can change, so the banner names the food only */}
+                  {editing ? formFill.name : `${formFill.name} · ${formFill.unitCalories} kcal/${formFill.unit}`}
                 </span>
-                <button class={styles.searchInfoClear} onClick={clearSearch}>Clear</button>
+                <span class={styles.searchInfoActions}>
+                  {!editing && <button class={styles.searchInfoClear} onClick={startEdit}>Edit</button>}
+                  <button class={styles.searchInfoClear} onClick={clearSearch}>Clear</button>
+                </span>
               </div>
               {formFill.isLiquid && (
                 <div class={styles.liquidNote}>
@@ -343,7 +369,7 @@ export function FoodPicker({
               quantity: formFill.quantity,
               nutrients: formFill.nutrients,
             } : undefined}
-            hideUnitAndCalories={!!formFill}
+            hideUnitAndCalories={!!formFill && !editing}
             portions={formFill?.portions ?? null}
             showSaveAsCustom={showSaveAsCustom}
             barcode={barcode}
@@ -352,6 +378,7 @@ export function FoodPicker({
             saveAsCustom={saveAsCustom}
             onSaveAsCustomChange={handleSaveAsCustomChange}
             existingCustomFoodId={formFill?.customFoodId}
+            hideFoodDetails={!!formFill?.customFoodId && !editing}
             submitLabel={submitLabel}
             showSaveAndAddNew={showSaveAndAddNew}
             onSubmit={handleSubmit}

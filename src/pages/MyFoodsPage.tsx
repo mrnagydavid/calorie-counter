@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/index'
+import { db, type CustomFood } from '../db/index'
 import { SortToggle } from '../components/SortToggle'
+import { SavedFoodEditor } from '../components/SavedFoodEditor'
 import { sortCustomFoods, type SortMode } from '../utils/sortCustomFoods'
 import styles from './MyFoodsPage.module.css'
 
@@ -10,6 +11,7 @@ export function MyFoodsPage() {
   const [sort, setSort] = useState<SortMode>('date')
   const [hideBarcode, setHideBarcode] = useState(true)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<CustomFood | null>(null)
 
   const allCustomFoods = useLiveQuery(() => db.customFoods.toArray())
 
@@ -61,8 +63,14 @@ export function MyFoodsPage() {
               <div class={styles.name}>{food.name}</div>
               <div class={styles.meta}>{food.caloriesPerUnit} kcal/{food.unit}</div>
             </div>
+            {/* An edit button, not a row tap: in the picker's list a tap logs the food */}
+            <button class={styles.iconButton} onClick={() => setEditing(food)} aria-label="Edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+              </svg>
+            </button>
             <button
-              class={`${styles.deleteButton} ${confirmingDeleteId === food.id ? styles.deleteConfirm : ''}`}
+              class={`${styles.iconButton} ${styles.deleteButton} ${confirmingDeleteId === food.id ? styles.deleteConfirm : ''}`}
               onClick={() => handleDelete(food.id)}
             >
               {confirmingDeleteId === food.id ? (
@@ -76,6 +84,8 @@ export function MyFoodsPage() {
           </div>
         ))}
       </div>
+
+      {editing && <SavedFoodEditor food={editing} onClose={() => setEditing(null)} />}
     </div>
   )
 }
