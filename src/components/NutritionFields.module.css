@@ -1,0 +1,77 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-align: left;
+}
+
+.chevron {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.unitLabel {
+  align-self: flex-end;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  font-size: 15px;
+}
+
+.subLabel {
+  font-size: 14px;
+  padding-left: 16px;
+  color: var(--color-text-secondary);
+}
+
+.inputGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input {
+  width: 90px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  text-align: right;
+  background: var(--color-bg-secondary);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.unit {
+  width: 12px;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.summary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/index'
+import { db, type Nutrients } from '../db/index'
 import { SortToggle } from './SortToggle'
 import { sortCustomFoods, type SortMode } from '../utils/sortCustomFoods'
 import styles from './CustomFoodSearch.module.css'
@@ -10,6 +10,7 @@ export interface CustomFoodResult {
   name: string
   caloriesPerUnit: number
   unit: string
+  nutrients?: Nutrients
 }
 
 interface CustomFoodSearchProps {
@@ -102,6 +103,7 @@ export function CustomFoodSearch({ onSelect, onClose, initialQuery = '' }: Custo
                   name: food.name,
                   caloriesPerUnit: food.caloriesPerUnit,
                   unit: food.unit,
+                  nutrients: food.nutrients,
                 })}
               >
                 <div class={styles.resultName}>{food.name}</div>

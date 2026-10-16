@@ -1,6 +1,7 @@
 import { useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { db } from '../db/index'
+import { entryNutrients } from '../utils/nutrients'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 
 interface AddIntakePageProps {
@@ -25,6 +26,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
       calories: result.calories,
       quantity: result.quantity,
       unitCalories: result.unitCalories,
+      ...entryNutrients(result.unitNutrients),
       unit: result.unit,
       source: barcode ? 'barcode' : 'manual',
       barcode,
@@ -43,6 +45,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
         name: result.name.trim(),
         caloriesPerUnit: result.unitCalories,
         unit: result.unit,
+        nutrients: result.unitNutrients ?? {},
         barcode,
         lastUsed: new Date().toISOString(),
       })

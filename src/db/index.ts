@@ -15,12 +15,24 @@ export interface Settings {
   dayOverrides: Partial<Record<DayOfWeek, number>>
   exportReminderEnabled: boolean
   exportReminderDismissedUntil?: string // YYYY-MM format
+  dataVersion?: number // data migrations done; absent means 1
   // Personal details, stored as any profile field would be. They have no
   // Profile input yet — the bike calculator collects and remembers them.
   maxHr?: number // maximum heart rate, for reading effort as a share of max
   lastWeightKg?: number // fallback for calculators when no weigh-in exists
   createdAt: string
   updatedAt: string
+}
+
+/** Grams per unit, in EU label order. An absent field is unknown, not zero. */
+export interface Nutrients {
+  fat?: number
+  saturatedFat?: number
+  carbs?: number
+  sugars?: number
+  fiber?: number
+  protein?: number
+  salt?: number
 }
 
 export interface IntakeEntry {
@@ -30,6 +42,7 @@ export interface IntakeEntry {
   calories: number
   quantity: number
   unitCalories: number
+  unitNutrients?: Nutrients // per unit; omitted when no value is known
   unit: string // '100g', '100ml', 'serving', 'piece', etc.
   source: 'barcode' | 'manual'
   barcode?: string
@@ -62,6 +75,8 @@ export interface CustomFood {
   name: string
   caloriesPerUnit: number
   unit: string
+  // undefined: not checked yet. {}: checked, nothing known.
+  nutrients?: Nutrients
   barcode?: string
   lastUsed: string
 }
@@ -86,8 +101,10 @@ export interface BarcodeCacheEntry {
     kcal: number
     unit: 'serving' | '100g' | '100ml' | 'total' | 'piece'
     servingSize?: string
+    nutrients?: Nutrients
   }>
   cachedAt: string
+  version?: number // absent or below 2 means no nutrients; fetch again
 }
 
 export const db = new Dexie('CalorieCounterDB') as Dexie & {

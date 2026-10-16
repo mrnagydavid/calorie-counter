@@ -1,21 +1,15 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/index'
+import { db, type Nutrients } from '../db/index'
+import { loadFoods, type FoodItem } from '../services/usdaFoods'
 import styles from './FoodSearch.module.css'
-
-interface FoodItem {
-  id: number
-  name: string
-  cat: string
-  kcal: number
-  portions?: { desc: string; g: number }[]
-}
 
 export interface FoodSearchResult {
   name: string
   cat: string
   kcal: number
   portions?: { desc: string; g: number }[]
+  nutrients?: Nutrients // per 100g
 }
 
 interface FoodSearchProps {
@@ -23,15 +17,6 @@ interface FoodSearchProps {
   onClose: () => void
   onShowMyFoods?: (query: string) => void
   initialQuery?: string
-}
-
-let _foodsCache: FoodItem[] | null = null
-
-async function loadFoods(): Promise<FoodItem[]> {
-  if (_foodsCache) return _foodsCache
-  const res = await fetch('/usda-foods.json')
-  _foodsCache = await res.json()
-  return _foodsCache!
 }
 
 /**
@@ -181,7 +166,7 @@ export function FoodSearch({ onSelect, onClose, onShowMyFoods, initialQuery = ''
             <button
               key={food.id}
               class={styles.resultItem}
-              onClick={() => onSelect({ name: food.name, cat: food.cat, kcal: food.kcal, portions: food.portions }, query)}
+              onClick={() => onSelect({ name: food.name, cat: food.cat, kcal: food.kcal, portions: food.portions, nutrients: food.n }, query)}
             >
               <div class={styles.resultName}>{food.name}</div>
               <div class={styles.resultMeta}>

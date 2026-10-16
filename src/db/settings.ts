@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS: Settings = {
   baselineCalories: 2000,
   dayOverrides: {},
   exportReminderEnabled: true,
+  dataVersion: 2,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 }
@@ -18,7 +19,7 @@ export async function getOrCreateSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(
-  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil' | 'maxHr' | 'lastWeightKg'>>,
+  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil' | 'maxHr' | 'lastWeightKg' | 'dataVersion'>>,
 ): Promise<void> {
   const current = await getOrCreateSettings()
   const updated = {

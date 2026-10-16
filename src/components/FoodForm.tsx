@@ -1,11 +1,23 @@
 import { useState, useCallback, useMemo } from 'preact/hooks'
+import type { Nutrients } from '../db/index'
+import {
+  formatNutrientSummary,
+  hasNutrients,
+  nutrientsToInputs,
+  parseNutrientInputs,
+  scaleNutrients,
+  type NutrientKey,
+} from '../utils/nutrients'
 import { NumericInput } from './NumericInput'
+import { NutritionFields } from './NutritionFields'
 import styles from './FoodForm.module.css'
 
 export interface FoodFormResult {
   name: string
   calories: number
   unitCalories: number
+  /** Per unit, like `unitCalories`. Absent when no value is known. */
+  unitNutrients?: Nutrients
   quantity: number
   unit: string
   saveAsCustom: boolean
@@ -20,6 +32,7 @@ export interface FoodFormInitial {
   unit?: string
   customUnit?: string
   unitCalories?: number
+  nutrients?: Nutrients
   /** Display quantity: grams for 100g/100ml, count for piece/serving/total */
   quantity?: number
 }
@@ -68,6 +81,10 @@ function computeDbQuantity(unit: string, qty: number): number {
   return qty
 }
 
+function nutritionUnitLabel(unit: string): string {
+  return unit === 'total' ? 'total' : `per ${unit}`
+}
+
 function initQuantity(unit?: string, qty?: number): string {
   if (qty !== undefined) return String(qty)
   if (unit === '100g' || unit === '100ml') return '100'
@@ -98,6 +115,7 @@ export function FoodForm({
   )
   const [quantity, setQuantity] = useState(initQuantity(initial?.unit, initial?.quantity))
   const [name, setName] = useState(initial?.name ?? '')
+  const [nutrientInputs, setNutrientInputs] = useState(() => nutrientsToInputs(initial?.nutrients))
 
   const cal = parseInt(unitCalories, 10) || 0
   const qty = parseFloat(quantity) || 0
@@ -105,6 +123,18 @@ export function FoodForm({
   const total = computeTotal(resolvedUnit, cal, qty)
   const isTotal = unit === 'total'
   const showQuantity = !isTotal
+
+  const enteredNutrients = useMemo(() => parseNutrientInputs(nutrientInputs), [nutrientInputs])
+  const nutrientSummary = isTotal || qty <= 0
+    ? null
+    : formatNutrientSummary(scaleNutrients(enteredNutrients, computeDbQuantity(resolvedUnit, qty)))
+  const nutritionResult = existingCustomFoodId
+    ? initial?.nutrients // a saved food keeps its own values, and the section is hidden
+    : hasNutrients(enteredNutrients) ? enteredNutrients : undefined
+
+  const handleNutrientChange = useCallback((key: NutrientKey, value: string) => {
+    setNutrientInputs((prev) => ({ ...prev, [key]: value }))
+  }, [])
 
   const canSubmit = cal > 0
     && (!(showSaveAsCustom && saveAsCustom) || name.trim().length > 0)
@@ -122,12 +152,13 @@ export function FoodForm({
     name: name.trim() || `${total} kcal`,
     calories: total,
     unitCalories: cal,
+    unitNutrients: nutritionResult,
     quantity: computeDbQuantity(resolvedUnit, qty),
     unit: resolvedUnit,
     saveAsCustom: existingCustomFoodId ? false : saveAsCustom,
     barcode: barcode.trim(),
     existingCustomFoodId,
-  }), [name, total, cal, qty, resolvedUnit, saveAsCustom, barcode, existingCustomFoodId])
+  }), [name, total, cal, qty, resolvedUnit, saveAsCustom, barcode, existingCustomFoodId, nutritionResult])
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return
@@ -143,6 +174,7 @@ export function FoodForm({
     setUnitCalories('')
     setQuantity('100')
     setName('')
+    setNutrientInputs(nutrientsToInputs(undefined))
     onSaveAsCustomChange?.(false)
     onBarcodeChange?.('')
   }, [canSubmit, buildResult, onSaveAndAddNew, onSaveAsCustomChange, onBarcodeChange])
@@ -255,6 +287,16 @@ export function FoodForm({
       )}
 
       <div class={styles.total}>Total: {total} kcal</div>
+
+      {/* Nutrition */}
+      {!existingCustomFoodId && (
+        <NutritionFields
+          values={nutrientInputs}
+          onChange={handleNutrientChange}
+          unitLabel={nutritionUnitLabel(resolvedUnit)}
+          summary={nutrientSummary && `Total: ${nutrientSummary}`}
+        />
+      )}
 
       {/* Name */}
       {!existingCustomFoodId && (

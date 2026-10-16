@@ -8,6 +8,7 @@ import { ensureTodayTarget, getTargetForDate, getTargetsForRange } from '../db/d
 import { DateNav } from '../components/DateNav'
 import { CalorieBudgetBar } from '../components/CalorieBudgetBar'
 import { EntryList } from '../components/EntryList'
+import { NutritionSummary } from '../components/NutritionSummary'
 import { Fab } from '../components/Fab'
 import { BarcodeScanner } from '../components/BarcodeScanner'
 import { InstallBanner } from '../components/InstallBanner'
@@ -192,6 +193,7 @@ export function Dashboard() {
       )}
 
       <CalorieBudgetBar consumed={consumed} target={target} />
+      <NutritionSummary intakes={intakes} />
       <EntryList intakes={intakes} burns={burns} weightEntry={weightEntry} />
       <Fab date={date} remaining={remaining} onScanBarcode={() => setScanning(true)} />
       {scanning && (

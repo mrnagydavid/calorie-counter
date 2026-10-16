@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useRef } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/index'
+import { db, type Nutrients } from '../db/index'
+import { hasNutrients } from '../utils/nutrients'
+import { findUsdaFoodByName } from '../services/usdaFoods'
 import { FoodSearch, type FoodSearchResult } from './FoodSearch'
 import { CustomFoodSearch, type CustomFoodResult } from './CustomFoodSearch'
 import { BarcodeScanner, type ScannedEntry } from './BarcodeScanner'
@@ -25,6 +27,7 @@ interface FoodPickerProps {
 interface RecentFood {
   name: string
   unitCalories: number
+  unitNutrients?: Nutrients
   quantity: number
   unit: string
 }
@@ -33,6 +36,7 @@ interface FormFill {
   name: string
   unit: string
   unitCalories: number
+  nutrients?: Nutrients
   /** Display quantity (grams for 100g/100ml, count for others) */
   quantity: number
   portions?: { desc: string; g: number }[] | null
@@ -112,6 +116,7 @@ export function FoodPicker({
       result.push({
         name: entry.name,
         unitCalories: entry.unitCalories,
+        unitNutrients: entry.unitNutrients,
         quantity: entry.quantity,
         unit: entry.unit,
       })
@@ -134,6 +139,7 @@ export function FoodPicker({
       unitCalories: result.kcal,
       unit: '100g',
       quantity: 100,
+      nutrients: result.nutrients,
       portions: result.portions || null,
       isLiquid: liquid,
       searchQuery: query,
@@ -148,6 +154,7 @@ export function FoodPicker({
       unitCalories: result.caloriesPerUnit,
       unit: result.unit,
       quantity: qty,
+      nutrients: result.nutrients,
       customFoodId: result.id,
     })
     setSearchingCustom(false)
@@ -167,7 +174,9 @@ export function FoodPicker({
       unitCalories: entry.unitCalories,
       unit: entry.unit,
       quantity: qty,
+      nutrients: entry.nutrients,
       portions: entry.portions || null,
+      customFoodId: entry.customFoodId,
       foundByBarcode: true,
     })
     setBarcode(entry.barcode)
@@ -195,11 +204,27 @@ export function FoodPicker({
       qty = item.quantity
     }
     const match = await db.customFoods.where('name').equals(item.name).first()
+    // First source with a known value: the saved food (same name and unit), the entry itself,
+    // then the USDA food with the same name (100g only).
+    let nutrients: Nutrients | undefined
+    if (match && match.unit === item.unit && hasNutrients(match.nutrients)) {
+      nutrients = match.nutrients
+    } else if (hasNutrients(item.unitNutrients)) {
+      nutrients = item.unitNutrients
+    } else if (item.unit === '100g') {
+      try {
+        const usda = await findUsdaFoodByName(item.name)
+        if (hasNutrients(usda?.n)) nutrients = usda.n
+      } catch {
+        // The file did not load. The tap must still fill the form.
+      }
+    }
     applyFill({
       name: item.name,
       unitCalories: item.unitCalories,
       unit: item.unit,
       quantity: qty,
+      nutrients,
       customFoodId: match?.id,
     })
   }, [applyFill])
@@ -316,6 +341,7 @@ export function FoodPicker({
               unit: formFill.unit,
               unitCalories: formFill.unitCalories,
               quantity: formFill.quantity,
+              nutrients: formFill.nutrients,
             } : undefined}
             hideUnitAndCalories={!!formFill}
             portions={formFill?.portions ?? null}

@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
-import { db } from '../db/index'
+import { db, type Nutrients } from '../db/index'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { FeatureIntro } from '../components/FeatureIntro'
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
 import { useDraftCache } from '../hooks/useDraftCache'
 import { useToday } from '../hooks/useToday'
+import { roundNutrients, scaleNutrients, sumKnownInAll } from '../utils/nutrients'
 import styles from './RecipeCalculator.module.css'
 
 interface RecipeCalculatorDraft {
@@ -21,6 +22,8 @@ interface RecipeIngredient {
   kcalPer100g: number
   grams: number
   totalKcal: number
+  /** Total for this amount, not per unit. Absent when no value is known. */
+  totalNutrients?: Nutrients
 }
 
 export function RecipeCalculator() {
@@ -88,6 +91,7 @@ export function RecipeCalculator() {
       kcalPer100g: ingredientKcalPer100g,
       grams,
       totalKcal: result.calories,
+      totalNutrients: result.unitNutrients && scaleNutrients(result.unitNutrients, result.quantity),
     }])
     setPicking(false)
   }, [])
@@ -95,11 +99,18 @@ export function RecipeCalculator() {
   const handleSave = async () => {
     if (!canSave || kcalPer100g === null) return
 
+    // Per 100g of the prepared food. A nutrient is known only when every ingredient has it.
+    const nutrients = roundNutrients(scaleNutrients(
+      sumKnownInAll(ingredients.map((i) => i.totalNutrients ?? {})),
+      100 / preparedWeight,
+    ))
+
     await db.customFoods.add({
       id: crypto.randomUUID(),
       name: displayName,
       caloriesPerUnit: kcalPer100g,
       unit: '100g',
+      nutrients,
       lastUsed: new Date().toISOString(),
     })
 

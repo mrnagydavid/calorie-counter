@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/index'
+import { db, type Nutrients } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
 import { todayString } from '../db/dates'
 import { getTargetForDate } from '../db/dailyTargets'
@@ -11,6 +11,7 @@ import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
 import { useDraftCache } from '../hooks/useDraftCache'
 import { barColor } from '../utils/barColor'
+import { entryNutrients } from '../utils/nutrients'
 import styles from './MealPlanner.module.css'
 
 interface MealPlannerDraft {
@@ -27,6 +28,7 @@ interface DraftItem {
   name: string
   calories: number
   unitCalories: number
+  unitNutrients?: Nutrients
   quantity: number
   unit: string
 }
@@ -98,6 +100,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
       name: result.name,
       calories: result.calories,
       unitCalories: result.unitCalories,
+      unitNutrients: result.unitNutrients,
       quantity: result.quantity,
       unit: result.unit,
     }])
@@ -119,6 +122,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         calories: item.calories,
         quantity: item.quantity,
         unitCalories: item.unitCalories,
+        ...entryNutrients(item.unitNutrients),
         unit: item.unit,
         source: 'manual',
         createdAt: now,

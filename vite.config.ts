@@ -35,6 +35,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // usda-foods.json is about 2.1 MB
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/world\.openfoodfacts\.org\/api\//,

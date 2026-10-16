@@ -1,9 +1,14 @@
-import { db } from '../db/index'
+import { db, type Nutrients } from '../db/index'
+import { hasNutrients, roundNutrients } from '../utils/nutrients'
+
+// Current barcodeCache row version. Older rows have no nutrients.
+const CACHE_VERSION = 2
 
 export interface CalorieVariant {
   kcal: number
   unit: 'serving' | '100g' | '100ml' | 'total' | 'piece'
   servingSize?: string // e.g. "32g"
+  nutrients?: Nutrients // per variant unit
 }
 
 export interface OFFProduct {
@@ -15,15 +20,11 @@ export interface OFFProduct {
 export type LookupError = 'timeout' | 'network' | 'not-found'
 
 export type LookupResult =
-  | { ok: true; product: OFFProduct; source: 'cache' | 'network' }
+  // `stale`: the fetch failed, so this is an old cache row with no nutrients
+  | { ok: true; product: OFFProduct; source: 'cache' | 'network'; stale?: true }
   | { ok: false; error: LookupError }
 
-interface OFFNutriments {
-  'energy-kcal_serving'?: number
-  'energy-kcal_100g'?: number
-  'energy-kj_serving'?: number
-  'energy-kj_100g'?: number
-}
+type OFFNutriments = Record<string, number | string | undefined>
 
 interface OFFResponse {
   status: number
@@ -41,6 +42,58 @@ function isLiquid(quantity?: string): boolean {
   return /ml|cl|dl|l\b/i.test(quantity)
 }
 
+// Nutrients field -> OFF key. OFF gives all of them in grams.
+const OFF_KEYS: Record<keyof Nutrients, string> = {
+  fat: 'fat',
+  saturatedFat: 'saturated-fat',
+  carbs: 'carbohydrates',
+  sugars: 'sugars',
+  fiber: 'fiber',
+  protein: 'proteins',
+  salt: 'salt',
+}
+
+function readNumber(nutriments: OFFNutriments, key: string): number | undefined {
+  const value = nutriments[key]
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined
+}
+
+/** Read one nutrient for a suffix ('100g' or 'serving'). Salt falls back to sodium. */
+function readNutrient(
+  nutriments: OFFNutriments,
+  field: keyof Nutrients,
+  suffix: '100g' | 'serving',
+): number | undefined {
+  const value = readNumber(nutriments, `${OFF_KEYS[field]}_${suffix}`)
+  if (value !== undefined || field !== 'salt') return value
+  const sodium = readNumber(nutriments, `sodium_${suffix}`)
+  return sodium === undefined ? undefined : sodium * 2.5
+}
+
+/** Grams in a serving size such as "32g" or "1 portion (30 g)". */
+function servingGrams(servingSize?: string): number | undefined {
+  const match = servingSize?.match(/(\d+(?:[.,]\d+)?)\s*g\b/i)
+  const grams = match ? Number(match[1].replace(',', '.')) : undefined
+  return grams && grams > 0 ? grams : undefined
+}
+
+function extractNutrients(
+  nutriments: OFFNutriments,
+  suffix: '100g' | 'serving',
+  grams?: number,
+): Nutrients | undefined {
+  const result: Nutrients = {}
+  for (const field of Object.keys(OFF_KEYS) as (keyof Nutrients)[]) {
+    let value = readNutrient(nutriments, field, suffix)
+    if (value === undefined && suffix === 'serving' && grams) {
+      const per100 = readNutrient(nutriments, field, '100g')
+      if (per100 !== undefined) value = (per100 * grams) / 100
+    }
+    if (value !== undefined) result[field] = value
+  }
+  return hasNutrients(result) ? roundNutrients(result) : undefined
+}
+
 function extractVariants(
   nutriments: OFFNutriments,
   quantity?: string,
@@ -50,21 +103,23 @@ function extractVariants(
   const baseUnit = isLiquid(quantity) ? '100ml' : '100g'
 
   // Per 100g/100ml — add first so it's the default selection
-  const kcal100 = nutriments['energy-kcal_100g']
-  const kj100 = nutriments['energy-kj_100g']
+  const kcal100 = readNumber(nutriments, 'energy-kcal_100g')
+  const kj100 = readNumber(nutriments, 'energy-kj_100g')
+  const nutrients100 = extractNutrients(nutriments, '100g')
   if (kcal100 && kcal100 > 0) {
-    variants.push({ kcal: Math.round(kcal100), unit: baseUnit })
+    variants.push({ kcal: Math.round(kcal100), unit: baseUnit, nutrients: nutrients100 })
   } else if (kj100 && kj100 > 0) {
-    variants.push({ kcal: Math.round(kj100 / 4.184), unit: baseUnit })
+    variants.push({ kcal: Math.round(kj100 / 4.184), unit: baseUnit, nutrients: nutrients100 })
   }
 
   // Per serving
-  const kcalServing = nutriments['energy-kcal_serving']
-  const kjServing = nutriments['energy-kj_serving']
+  const kcalServing = readNumber(nutriments, 'energy-kcal_serving')
+  const kjServing = readNumber(nutriments, 'energy-kj_serving')
+  const nutrientsServing = extractNutrients(nutriments, 'serving', servingGrams(servingSize))
   if (kcalServing && kcalServing > 0) {
-    variants.push({ kcal: Math.round(kcalServing), unit: 'serving', servingSize })
+    variants.push({ kcal: Math.round(kcalServing), unit: 'serving', servingSize, nutrients: nutrientsServing })
   } else if (kjServing && kjServing > 0) {
-    variants.push({ kcal: Math.round(kjServing / 4.184), unit: 'serving', servingSize })
+    variants.push({ kcal: Math.round(kjServing / 4.184), unit: 'serving', servingSize, nutrients: nutrientsServing })
   }
 
   return variants
@@ -123,18 +178,22 @@ async function fetchFromOFF(barcode: string, signal?: AbortSignal): Promise<Look
 }
 
 export async function lookupBarcode(barcode: string, signal?: AbortSignal): Promise<LookupResult> {
-  // 1. Check cache
+  // 1. Check cache. A row below the current version has no nutrients: fetch it again.
   const cached = await db.barcodeCache.get(barcode)
-  if (cached) {
-    return {
-      ok: true,
-      product: { name: cached.name, brand: cached.brand, variants: cached.variants },
-      source: 'cache',
-    }
+  const cachedResult: LookupResult | undefined = cached && {
+    ok: true,
+    product: { name: cached.name, brand: cached.brand, variants: cached.variants },
+    source: 'cache',
   }
+  if (cachedResult && (cached?.version ?? 1) >= CACHE_VERSION) return cachedResult
 
   // 2. Fetch from network
   const result = await fetchFromOFF(barcode, signal)
+
+  // On a network error or timeout, a stale row is better than nothing
+  if (!result.ok && cachedResult && result.error !== 'not-found') {
+    return { ...cachedResult, stale: true }
+  }
 
   // 3. Cache successful results
   if (result.ok) {
@@ -144,6 +203,7 @@ export async function lookupBarcode(barcode: string, signal?: AbortSignal): Prom
       brand: result.product.brand,
       variants: result.product.variants,
       cachedAt: new Date().toISOString(),
+      version: CACHE_VERSION,
     })
   }
 

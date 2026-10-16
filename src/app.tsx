@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'preact/hooks'
 import Router, { Route } from 'preact-router'
 import { BottomNav } from './components/BottomNav'
 import { Dashboard } from './pages/Dashboard'
@@ -9,9 +10,19 @@ import { MealPlanner } from './pages/MealPlanner'
 import { RecipeCalculator } from './pages/RecipeCalculator'
 import { AddWeightPage } from './pages/AddWeightPage'
 import { MyFoodsPage } from './pages/MyFoodsPage'
+import { UpdateScreen } from './components/UpdateScreen'
+import { checkDataGate } from './services/nutrientMigration'
 import styles from './app.module.css'
 
 export function App() {
+  // The update screen replaces the app, so the Dashboard never shows before it.
+  const [gate, setGate] = useState<'checking' | 'update' | 'ready'>('checking')
+
+  useEffect(() => { checkDataGate().then(setGate) }, [])
+
+  if (gate === 'checking') return null
+  if (gate === 'update') return <UpdateScreen onDone={() => setGate('ready')} />
+
   return (
     <>
       <main class={styles.page}>

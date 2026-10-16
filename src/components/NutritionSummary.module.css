@@ -1,0 +1,75 @@
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding-bottom: 8px;
+  text-align: left;
+}
+
+/* Same style as the section title of the entry list */
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.closedLine {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  margin-left: auto;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--color-text-secondary);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row,
+.subRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.subRow {
+  padding-left: 16px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.subRow .value {
+  font-weight: 500;
+}
+
+.coverage {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}

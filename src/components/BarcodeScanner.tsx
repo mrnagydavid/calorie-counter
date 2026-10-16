@@ -1,9 +1,11 @@
 import { route } from 'preact-router'
 import { lazy, Suspense } from 'preact/compat'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
-import { db } from '../db/index'
+import { db, type Nutrients } from '../db/index'
+import { entryNutrients } from '../utils/nutrients'
 import { lookupBarcode, type CalorieVariant, type OFFProduct, type LookupError } from '../services/openfoodfacts'
 import { isValidBarcode, supportsNativeBarcodeDetector } from '../services/barcodeDetector'
+import { FoodSpinner } from './FoodSpinner'
 import { NativeBarcodeScanner } from './NativeBarcodeScanner'
 import styles from './BarcodeScanner.module.css'
 import { NumericInput } from './NumericInput'
@@ -14,23 +16,6 @@ const Html5QrcodeScanner = lazy(() =>
   import('./Html5QrcodeScanner').then((m) => ({ default: m.Html5QrcodeScanner })),
 )
 
-const FOOD_EMOJIS = ['🍎', '🥚', '🍕', '🥑', '🍌', '🧀', '🥕', '🍩']
-
-function FoodSpinner() {
-  const [idx, setIdx] = useState(0)
-  const ref = useRef<HTMLSpanElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const onIteration = () => setIdx((i) => (i + 1) % FOOD_EMOJIS.length)
-    el.addEventListener('animationiteration', onIteration)
-    return () => el.removeEventListener('animationiteration', onIteration)
-  }, [])
-
-  return <span ref={ref} class={styles.foodSpinner}>{FOOD_EMOJIS[idx]}</span>
-}
-
 export interface ScannedEntry {
   name: string
   calories: number
@@ -39,6 +24,9 @@ export interface ScannedEntry {
   unit: string
   barcode: string
   portions?: { desc: string; g: number }[]
+  nutrients?: Nutrients // per unit
+  /** Set when the barcode belongs to a saved food, so the picker treats it as that food. */
+  customFoodId?: string
 }
 
 interface BarcodeScannerProps {
@@ -118,6 +106,8 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
           quantity: 1,
           unit: customFood.unit,
           barcode,
+          nutrients: customFood.nutrients,
+          customFoodId: customFood.id,
         })
         return
       }
@@ -130,6 +120,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
           variants: [{
             kcal: customFood.caloriesPerUnit,
             unit: customFood.unit as CalorieVariant['unit'],
+            nutrients: customFood.nutrients,
           }],
         },
       })
@@ -172,6 +163,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
           unit: variant.unit,
           barcode,
           portions: portions.length > 0 ? portions : undefined,
+          nutrients: variant.nutrients,
         })
         return
       }
@@ -220,7 +212,15 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
     const entryName = [product.name, product.brand].filter(Boolean).join(' — ')
 
     if (onAddEntry) {
-      onAddEntry({ name: entryName, calories: total, unitCalories, quantity, unit: selectedVariant.unit, barcode })
+      onAddEntry({
+        name: entryName,
+        calories: total,
+        unitCalories,
+        quantity,
+        unit: selectedVariant.unit,
+        barcode,
+        nutrients: selectedVariant.nutrients,
+      })
     } else {
       await db.intakeEntries.add({
         id: crypto.randomUUID(),
@@ -229,6 +229,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
         calories: total,
         quantity,
         unitCalories,
+        ...entryNutrients(selectedVariant.nutrients),
         unit: selectedVariant.unit,
         source: 'barcode',
         barcode,
