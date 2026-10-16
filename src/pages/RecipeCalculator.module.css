@@ -176,15 +176,42 @@
   color: var(--color-text-secondary);
 }
 
-.weightHint {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-
 .result {
   font-size: 18px;
   font-weight: 700;
   color: var(--color-primary-dark);
+}
+
+.nutritionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+}
+
+.chevron {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--color-text-secondary);
+}
+
+.nutritionEmpty {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.nutrition {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Like the column header of a food label */
+.nutritionUnit {
+  align-self: flex-end;
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 /* Actions */

@@ -48,19 +48,23 @@ export function entryNutrients(n: Nutrients | undefined): { unitNutrients?: Nutr
   return hasNutrients(n) ? { unitNutrients: n } : {}
 }
 
+export interface KnownTotals {
+  nutrients: Nutrients
+  unsaturated?: number
+}
+
 /**
- * Add up nutrient values. A nutrient is known only when every item has it,
- * because a partial sum would read as too low.
+ * The known totals of a sum, times `factor`. A nutrient is known when at least one item has
+ * it, and items without it add nothing: a partial value beats no value.
  */
-export function sumKnownInAll(list: Nutrients[]): Nutrients {
-  const out: Nutrients = {}
-  if (list.length === 0) return out
+export function knownTotals(sums: NutrientSums, factor = 1): KnownTotals {
+  const nutrients: Nutrients = {}
   for (const key of NUTRIENT_KEYS) {
-    if (list.every((n) => n[key] !== undefined)) {
-      out[key] = list.reduce((sum, n) => sum + (n[key] ?? 0), 0)
-    }
+    const { total, count } = sums.totals[key]
+    if (count > 0) nutrients[key] = total * factor
   }
-  return out
+  const { total, count } = sums.unsaturated
+  return { nutrients, unsaturated: count > 0 ? total * factor : undefined }
 }
 
 /**

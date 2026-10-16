@@ -7,7 +7,9 @@ import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
 import { useDraftCache } from '../hooks/useDraftCache'
 import { useToday } from '../hooks/useToday'
-import { roundNutrients, scaleNutrients, sumKnownInAll } from '../utils/nutrients'
+import { useNutritionFormOpen } from '../hooks/useNutritionFormOpen'
+import { hasNutrients, knownTotals, roundNutrients, scaleNutrients, sumNutrients } from '../utils/nutrients'
+import { NutritionRows } from '../components/NutritionRows'
 import styles from './RecipeCalculator.module.css'
 
 interface RecipeCalculatorDraft {
@@ -35,6 +37,8 @@ export function RecipeCalculator() {
   const [totalWeight, setTotalWeight] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
+  // Shared with the Nutrition section of the intake form
+  const [nutritionOpen, toggleNutrition] = useNutritionFormOpen()
 
   // Draft cache
   const draft = useDraftCache<RecipeCalculatorDraft>(
@@ -62,6 +66,13 @@ export function RecipeCalculator() {
   const totalIngredientGrams = ingredients.reduce((sum, i) => sum + i.grams, 0)
   const preparedWeight = parseFloat(totalWeight) || 0
   const kcalPer100g = preparedWeight > 0 ? Math.round(totalKcal / preparedWeight * 100) : null
+  // Per 100g of the prepared food, the same way as kcal. Ingredients without a value add nothing.
+  const per100g = preparedWeight > 0
+    ? knownTotals(
+      sumNutrients(ingredients.map((i) => ({ quantity: 1, unitNutrients: i.totalNutrients }))),
+      100 / preparedWeight,
+    )
+    : null
   const displayName = recipeName.trim() ? `${recipeName.trim()} (${date})` : ''
   const canSave = recipeName.trim().length > 0 && ingredients.length > 0 && preparedWeight > 0
 
@@ -97,20 +108,14 @@ export function RecipeCalculator() {
   }, [])
 
   const handleSave = async () => {
-    if (!canSave || kcalPer100g === null) return
-
-    // Per 100g of the prepared food. A nutrient is known only when every ingredient has it.
-    const nutrients = roundNutrients(scaleNutrients(
-      sumKnownInAll(ingredients.map((i) => i.totalNutrients ?? {})),
-      100 / preparedWeight,
-    ))
+    if (!canSave || kcalPer100g === null || per100g === null) return
 
     await db.customFoods.add({
       id: crypto.randomUUID(),
       name: displayName,
       caloriesPerUnit: kcalPer100g,
       unit: '100g',
-      nutrients,
+      nutrients: roundNutrients(per100g.nutrients),
       lastUsed: new Date().toISOString(),
     })
 
@@ -203,7 +208,7 @@ export function RecipeCalculator() {
         </button>
       </div>
 
-      {/* Prepared food weight + result */}
+      {/* Prepared food weight */}
       {ingredients.length > 0 && (
         <div class={styles.section}>
           <div class={styles.sectionTitle}>Prepared food weight</div>
@@ -218,14 +223,33 @@ export function RecipeCalculator() {
             />
             <span class={styles.unitLabel}>g</span>
           </div>
-          <div class={styles.weightHint}>
-            Ingredients total: {totalIngredientGrams}g
-          </div>
-          <div class={styles.result}>
-            {kcalPer100g !== null
-              ? `Result: ${kcalPer100g} kcal/100g`
-              : 'Enter weight to calculate'}
-          </div>
+        </div>
+      )}
+
+      {/* Nutrition per 100g, once the weight is known */}
+      {ingredients.length > 0 && per100g && (
+        <div class={styles.section}>
+          <button class={styles.nutritionHeader} onClick={toggleNutrition} aria-expanded={nutritionOpen}>
+            <span class={styles.sectionTitle}>Nutrition</span>
+            <span class={styles.chevron}>{nutritionOpen ? '▾' : '▸'}</span>
+          </button>
+          {nutritionOpen && (hasNutrients(per100g.nutrients) ? (
+            <div class={styles.nutrition}>
+              <div class={styles.nutritionUnit}>per 100g</div>
+              <NutritionRows {...per100g} />
+            </div>
+          ) : (
+            <div class={styles.nutritionEmpty}>No nutrition data</div>
+          ))}
+        </div>
+      )}
+
+      {/* Result */}
+      {ingredients.length > 0 && (
+        <div class={styles.result}>
+          {kcalPer100g !== null
+            ? `Result: ${kcalPer100g} kcal/100g`
+            : 'Enter weight to calculate'}
         </div>
       )}
 

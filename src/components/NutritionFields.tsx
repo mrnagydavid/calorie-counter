@@ -1,9 +1,7 @@
-import { useState } from 'preact/hooks'
+import { useNutritionFormOpen } from '../hooks/useNutritionFormOpen'
 import { NUTRIENT_KEYS, parseNutrientInputs, type NutrientInputs, type NutrientKey } from '../utils/nutrients'
 import { NumericInput } from './NumericInput'
 import styles from './NutritionFields.module.css'
-
-const STORAGE_KEY = 'nutrition-form-open'
 
 const LABELS: Record<NutrientKey, string> = {
   fat: 'Fat',
@@ -17,14 +15,6 @@ const LABELS: Record<NutrientKey, string> = {
 
 const SUB_ROWS: NutrientKey[] = ['saturatedFat', 'sugars']
 
-function readOpen(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
 interface NutritionFieldsProps {
   values: NutrientInputs
   onChange: (key: NutrientKey, value: string) => void
@@ -35,21 +25,11 @@ interface NutritionFieldsProps {
 }
 
 export function NutritionFields({ values, onChange, unitLabel, summary }: NutritionFieldsProps) {
-  const [open, setOpen] = useState(readOpen)
+  const [open, toggle] = useNutritionFormOpen()
 
   // Count what the inputs give, not what they hold: "abc" is not a value.
   const parsed = parseNutrientInputs(values)
   const known = NUTRIENT_KEYS.filter((key) => parsed[key] !== undefined).length
-
-  const toggle = () => {
-    const next = !open
-    setOpen(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
-    } catch {
-      // The state is a convenience. The section still works without it.
-    }
-  }
 
   return (
     <div class={styles.section}>

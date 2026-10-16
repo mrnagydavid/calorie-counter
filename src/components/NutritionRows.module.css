@@ -1,0 +1,29 @@
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row,
+.subRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.subRow {
+  padding-left: 16px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.subRow .value {
+  font-weight: 500;
+}

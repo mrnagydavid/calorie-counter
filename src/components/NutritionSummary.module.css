@@ -32,36 +32,11 @@
   color: var(--color-text-secondary);
 }
 
-.rows {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* The entry list has 12px of row padding above its first entry. The same space here keeps
+   the gap under both section titles equal. */
+.content {
+  padding-top: 12px;
 }
-
-.row,
-.subRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 15px;
-}
-
-.subRow {
-  padding-left: 16px;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-.value {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.subRow .value {
-  font-weight: 500;
-}
-
 
 .empty {
   font-size: 14px;

@@ -3,27 +3,14 @@ import type { IntakeEntry } from '../db/index'
 import {
   NUTRIENT_KEYS,
   formatNutrient,
+  knownTotals,
   sumNutrients,
   type NutrientKey,
-  type NutrientTotal,
 } from '../utils/nutrients'
+import { NutritionRows } from './NutritionRows'
 import styles from './NutritionSummary.module.css'
 
 const STORAGE_KEY = 'nutrition-today-open'
-
-type Row = { key: NutrientKey | 'unsaturated'; label: string; sub?: boolean }
-
-// Design 7.3. Unsaturated sits under saturated and is derived, so it has no input.
-const ROWS: Row[] = [
-  { key: 'fat', label: 'Fat' },
-  { key: 'saturatedFat', label: 'saturated', sub: true },
-  { key: 'unsaturated', label: 'unsaturated', sub: true },
-  { key: 'carbs', label: 'Carbohydrate' },
-  { key: 'sugars', label: 'sugars', sub: true },
-  { key: 'fiber', label: 'Fiber' },
-  { key: 'protein', label: 'Protein' },
-  { key: 'salt', label: 'Salt' },
-]
 
 const CLOSED_ROWS: { key: NutrientKey; label: string }[] = [
   { key: 'fat', label: 'Fat' },
@@ -61,9 +48,6 @@ export function NutritionSummary({ intakes }: NutritionSummaryProps) {
     }
   }
 
-  const totalOf = (key: Row['key']): NutrientTotal =>
-    key === 'unsaturated' ? sums.unsaturated : sums.totals[key]
-
   const closedLine = hasData
     ? `${CLOSED_ROWS.map(({ key, label }) => {
         const { total, count } = sums.totals[key]
@@ -79,26 +63,15 @@ export function NutritionSummary({ intakes }: NutritionSummaryProps) {
         <span class={styles.chevron}>{open ? '▾' : '▸'}</span>
       </button>
 
-      {open && (hasData ? (
-        <div class={styles.rows}>
-          {ROWS.map(({ key, label, sub }) => {
-            const { total, count } = totalOf(key)
-            // The derived row shows only when some entry has both fat and saturated fat.
-            if (key === 'unsaturated' && count === 0) return null
-            return (
-              <div key={key} class={sub ? styles.subRow : styles.row}>
-                <span>{label}</span>
-                <span class={styles.value}>
-                  {/* One decimal on every row, so the list never mixes integers and decimals */}
-                  {count > 0 ? `${total.toFixed(1)} g` : '–'}
-                </span>
-              </div>
-            )
-          })}
+      {open && (
+        <div class={styles.content}>
+          {hasData ? (
+            <NutritionRows {...knownTotals(sums)} />
+          ) : (
+            <div class={styles.empty}>No nutrition data for this day</div>
+          )}
         </div>
-      ) : (
-        <div class={styles.empty}>No nutrition data for this day</div>
-      ))}
+      )}
     </div>
   )
 }
