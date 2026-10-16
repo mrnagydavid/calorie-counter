@@ -91,9 +91,6 @@ export function NutritionSummary({ intakes }: NutritionSummaryProps) {
                 <span class={styles.value}>
                   {/* One decimal on every row, so the list never mixes integers and decimals */}
                   {count > 0 ? `${total.toFixed(1)} g` : '–'}
-                  {count > 0 && count < sums.entryCount && (
-                    <span class={styles.coverage}>{count} of {sums.entryCount}</span>
-                  )}
                 </span>
               </div>
             )

@@ -62,12 +62,6 @@
   font-weight: 500;
 }
 
-.coverage {
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--color-text-secondary);
-}
 
 .empty {
   font-size: 14px;
