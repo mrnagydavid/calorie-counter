@@ -132,11 +132,13 @@ export function FoodPicker({
   const applyFill = useCallback((fill: FormFill) => {
     setFormFill(fill)
     setFormKey((k) => k + 1)
-    setEditing(false)
+    // A pick starts as the short form. But when a scanned barcode waits to be saved (the tick
+    // is on after a scan miss), the full form opens, so the tick stays in sight.
+    setEditing(barcodeFromScan && saveAsCustom && !fill.customFoodId && !fill.foundByBarcode)
     // The tick stands for the saved food. It shows only after Edit.
     if (fill.customFoodId) setSaveAsCustom(true)
     scrollToUnit()
-  }, [scrollToUnit])
+  }, [scrollToUnit, barcodeFromScan, saveAsCustom])
 
   const handleSearchResult = useCallback((result: FoodSearchResult, query: string) => {
     const liquid = /beverages/i.test(result.cat) ||
@@ -378,7 +380,7 @@ export function FoodPicker({
             saveAsCustom={saveAsCustom}
             onSaveAsCustomChange={handleSaveAsCustomChange}
             existingCustomFoodId={formFill?.customFoodId}
-            hideFoodDetails={!!formFill?.customFoodId && !editing}
+            hideFoodDetails={!!formFill && !editing}
             submitLabel={submitLabel}
             showSaveAndAddNew={showSaveAndAddNew}
             onSubmit={handleSubmit}

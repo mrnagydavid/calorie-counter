@@ -54,7 +54,7 @@ interface FoodFormProps {
   onSaveAsCustomChange?: (value: boolean) => void
   /** The linked saved food. The tick then stands for it: on replaces its values, off deletes it. */
   existingCustomFoodId?: string
-  /** Hide name, Nutrition and the tick: the short form for a picked saved food. */
+  /** Hide name, Nutrition and the tick: the short form of a pick. */
   hideFoodDetails?: boolean
   /** Edit a saved food: no quantity, no totals and no tick. The name is required. */
   savedFood?: boolean
@@ -156,7 +156,7 @@ export function FoodForm({
     ? null
     : formatNutrientSummary(scaleNutrients(enteredNutrients, computeDbQuantity(resolvedUnit, qty)))
   const nutritionResult = hideFoodDetails
-    ? initial?.nutrients // a saved food keeps its own values, and the section is hidden
+    ? initial?.nutrients // a pick keeps its own values while the section is hidden
     : hasNutrients(enteredNutrients) ? enteredNutrients : undefined
   const tickShown = showSaveAsCustom && !hideFoodDetails && !savedFood
   const nameRequired = savedFood || (tickShown && saveAsCustom)
