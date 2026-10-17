@@ -1,0 +1,149 @@
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.empty,
+.caveat {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  padding: 24px 0;
+  text-align: center;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  text-align: left;
+}
+
+.card:active {
+  background: var(--color-border);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cardName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chevron {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.cardGoal {
+  margin-top: -4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.stats {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.statValue {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chipMet {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.chipNotMet {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.strip {
+  display: flex;
+  gap: 3px;
+}
+
+.mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.markMet {
+  background: var(--color-green);
+}
+
+.markMissed {
+  background: #fcd34d;
+}
+
+.markNone {
+  background: white;
+  border: 1px solid #d1d5db;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rule {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* On a narrow phone the 28 marks shrink instead of overflowing */
+.strip .mark {
+  flex: 1 1 0;
+  width: auto;
+  max-width: 8px;
+}

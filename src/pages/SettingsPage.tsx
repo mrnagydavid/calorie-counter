@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { useCallback, useEffect, useState } from 'preact/hooks'
 import { clearInstallPrompt, getInstallPrompt } from '../components/InstallBanner'
 import { NumericInput } from '../components/NumericInput'
+import { NutritionGoalsSection } from '../components/NutritionGoalsSection'
 import { updateTodayTarget } from '../db/dailyTargets'
 import { db, type DayOfWeek } from '../db/index'
 import {
@@ -33,6 +34,7 @@ export function SettingsPage() {
         baseline={settings.baselineCalories}
         overrides={settings.dayOverrides}
       />
+      <NutritionGoalsSection settings={settings} />
       <MyFoodsSection />
       <DataManagementSection />
       <InstallSection />
@@ -390,6 +392,17 @@ function LegalSection() {
               Open Food Facts project. We do our best, but nutritional values are
               approximate. Do not use this app to make medical decisions. We are not
               dietitians, doctors, or lawyers — which is ironic given this section.
+            </p>
+            <p>
+              The nutrition goal presets come from the WHO guidelines (2012–2023),
+              the EFSA reference values (2010, 2012), the EU food label rules
+              (2011), the Dietary Guidelines for
+              Americans 2025–2030, the National Academies reference intakes (2005,
+              2019), the Nordic Nutrition Recommendations 2023, the ESC/EAS
+              dyslipidaemia guidelines (2016) and the AHA/ACC lifestyle guideline
+              (2013). They are general guidelines for groups of people, not advice
+              for you. Your doctor or dietitian knows better than any preset (and
+              better than us).
             </p>
             <p>
               The app is provided "as is" with no warranties. If your banana has

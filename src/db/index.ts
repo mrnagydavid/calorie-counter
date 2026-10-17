@@ -20,9 +20,34 @@ export interface Settings {
   // Profile input yet — the bike calculator collects and remembers them.
   maxHr?: number // maximum heart rate, for reading effort as a share of max
   lastWeightKg?: number // fallback for calculators when no weigh-in exists
+  nutrientGoals?: NutrientGoals
+  saltUnit?: 'salt' | 'sodium' // display only; absent = 'salt'
   createdAt: string
   updatedAt: string
 }
+
+export type GoalKey =
+  | 'saturatedFat'
+  | 'unsaturatedFat'
+  | 'fat'
+  | 'carbs'
+  | 'sugars'
+  | 'fiber'
+  | 'protein'
+  | 'salt'
+
+export type GoalUnit = 'pctKcal' | 'g' | 'gPerKg' | 'gPer1000Kcal'
+
+/** One nutrient goal. A goal that is off keeps its values, so they come back when it is on again. */
+export interface NutrientGoal {
+  on: boolean
+  min?: number
+  max?: number
+  unit: GoalUnit // salt is always grams of salt
+}
+
+/** A missing goal and a goal with `on: false` both mean off. */
+export type NutrientGoals = Partial<Record<GoalKey, NutrientGoal>>
 
 /** Grams per unit, in EU label order. An absent field is unknown, not zero. */
 export interface Nutrients {
@@ -84,6 +109,10 @@ export interface CustomFood {
 export interface DailyTarget {
   date: string // YYYY-MM-DD, primary key
   target: number // base calorie target for the day (before burns)
+  // A copy of the goals that were on, so a later change does not change the past.
+  // Absent on rows from before goals existed: those days have no goals.
+  nutrientGoals?: NutrientGoals
+  weightKg?: number // the weight for g/kg goals, when one is on
 }
 
 export interface WeightEntry {

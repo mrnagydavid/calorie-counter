@@ -28,6 +28,8 @@ export function App() {
       <main class={styles.page}>
         <Router>
           <Route path="/" component={Dashboard} />
+          <Route path="/overview" component={History} />
+          {/* The old path of the Overview, for links saved before the rename */}
           <Route path="/history" component={History} />
           <Route path="/settings" component={SettingsPage} />
           <Route path="/my-foods" component={MyFoodsPage} />

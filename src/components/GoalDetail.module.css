@@ -1,0 +1,293 @@
+.goal {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.goalText {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.goalSub,
+.caveat {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.boxes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+}
+
+.boxLabel,
+.boxSub {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.boxValue {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  align-self: flex-start;
+  margin-top: -8px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chipMet {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.chipNotMet {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.chartBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Same style as the other section titles */
+.chartTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chart {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 160px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.chartUnit {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* The numbers on the left work like a ruler: the top of the scale, the goal and 0 */
+.chartArea {
+  display: flex;
+  gap: 6px;
+}
+
+.chartArea .chart {
+  flex: 1;
+  min-width: 0;
+}
+
+.axis {
+  position: relative;
+  width: 40px;
+  flex-shrink: 0;
+  height: 160px;
+}
+
+.axisLabel {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.axisGoal {
+  font-weight: 600;
+  color: #374151;
+}
+
+/* The current goal across all weeks, behind the bars */
+.currentGoal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--color-text-secondary);
+}
+
+.monthsUnderAxis {
+  padding-left: 46px;
+}
+
+.column {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+}
+
+.barMet {
+  background: #34d399;
+}
+
+.barNotMet {
+  background: #fcd34d;
+}
+
+.barNoGoal {
+  background: #d1d5db;
+}
+
+.barDaily {
+  background: var(--color-text-secondary);
+}
+
+/* One piece for each week, so the line steps where the goal changed */
+.goalLine {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  height: 0;
+  border-top: 2px solid #374151;
+}
+
+.sevenLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #d1d5db;
+}
+
+.sevenLine span {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+}
+
+.months {
+  display: flex;
+  gap: 2px;
+}
+
+.month {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+.lineSwatch {
+  width: 12px;
+  height: 0;
+  border-top: 2px solid #374151;
+}
+
+.dashSwatch {
+  width: 12px;
+  height: 0;
+  border-top: 1px dashed var(--color-text-secondary);
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.cellMet {
+  background: #d1fae5;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.cellMissed {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.cellNone {
+  border: 1px dashed #9ca3af;
+  color: var(--color-text-secondary);
+}
+
+.cellToday {
+  border: 2px solid #374151;
+  font-weight: 600;
+}
+
+.cellOutside {
+  color: #d1d5db;
+}
+
+.rule {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}

@@ -42,3 +42,10 @@
   font-size: 14px;
   color: var(--color-text-secondary);
 }
+
+/* The color note and the coverage line under the goal bars */
+.note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

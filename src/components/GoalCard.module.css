@@ -1,0 +1,129 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 14px;
+}
+
+.presets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.caption {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-bg-secondary);
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chipSelected {
+  border-color: var(--color-primary);
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fieldLabel {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.input {
+  width: 84px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: right;
+  background: var(--color-bg-secondary);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.inputError,
+.inputError:focus {
+  border-color: var(--color-red);
+  background: #fef2f2;
+}
+
+.select {
+  min-width: 0;
+  padding: 8px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 15px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.unit {
+  font-size: 15px;
+}
+
+.error {
+  font-size: 14px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.help {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.weight {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  font-size: 14px;
+}

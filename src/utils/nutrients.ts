@@ -132,15 +132,20 @@ export function nutrientsToInputs(n: Nutrients | undefined): NutrientInputs {
 const DECIMAL = /^(\d+\.?\d*|\.\d+)$/
 
 /**
- * Read the form inputs. A comma counts as the decimal separator ("7,7" is 7.7). An empty
- * input, or one that is not a number or is negative, is unknown. It is never 0. Known values
- * are rounded for storage.
+ * Read a typed number. A comma counts as the decimal separator ("7,7" is 7.7). An empty
+ * input, or one that is not a number or is negative, gives undefined, never 0.
  */
+export function parseDecimal(text: string): number | undefined {
+  const normalized = text.trim().replace(',', '.')
+  return DECIMAL.test(normalized) ? Number(normalized) : undefined
+}
+
+/** Read the form inputs with `parseDecimal`. Known values are rounded for storage. */
 export function parseNutrientInputs(inputs: NutrientInputs): Nutrients {
   const out: Nutrients = {}
   for (const key of NUTRIENT_KEYS) {
-    const text = inputs[key].trim().replace(',', '.')
-    if (DECIMAL.test(text)) out[key] = Number(text)
+    const value = parseDecimal(inputs[key])
+    if (value !== undefined) out[key] = value
   }
   return roundNutrients(out)
 }

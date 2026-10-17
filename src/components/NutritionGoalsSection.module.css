@@ -1,0 +1,99 @@
+/* Same section layout as the other Settings sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.intro {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  text-align: left;
+}
+
+.row:active {
+  background: var(--color-border);
+}
+
+.rowText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowName {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.rowLine {
+  font-size: 13px;
+  color: #374151;
+}
+
+.rowOff {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.chevron {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.warning {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  font-size: 14px;
+}
+
+.warningTitle {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-weight: 600;
+}
+
+.warningItems {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  padding-left: 26px;
+  color: #78350f;
+}
+
+.warningKcal {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.warningNote {
+  padding-left: 26px;
+}

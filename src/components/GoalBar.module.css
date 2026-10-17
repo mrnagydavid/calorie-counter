@@ -1,0 +1,40 @@
+/* The markers are 10px tall and stick out of the thinner track */
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 10px;
+}
+
+/* 6px, so it does not look like the 14px calorie bar */
+.track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 3px;
+}
+
+.minMark {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 10px;
+}
+
+/* The white edge keeps the marker visible on a green fill */
+.minMark path {
+  fill: #059669;
+  stroke: white;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}

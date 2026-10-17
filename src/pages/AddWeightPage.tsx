@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/index'
+import { refreshTodayWeight } from '../db/dailyTargets'
 import { NumericInput } from '../components/NumericInput'
 import styles from './AddWeightPage.module.css'
 
@@ -40,6 +41,7 @@ export function AddWeightPage({ date = '' }: AddWeightPageProps) {
       weight: weightNum,
       createdAt: new Date().toISOString(),
     })
+    await refreshTodayWeight(date)
 
     route('/')
   }, [canSubmit, date, weightNum])

@@ -1,0 +1,74 @@
+.caption {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.showAs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Same look as the sort toggle */
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.segment {
+  flex: 1;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.segmentActive {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* The same style as the help lines in the cards and the footnote */
+.cardNote {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.footnote {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.warning {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.saveButton {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.saveButton:hover {
+  background: var(--color-primary-dark);
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

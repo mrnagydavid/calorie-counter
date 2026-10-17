@@ -23,12 +23,12 @@ export function BottomNav() {
         </svg>
         Today
       </a>
-      <a href="/history" class={linkClass('/history')}>
+      <a href="/overview" class={`${linkClass('/overview')} ${currentPath.startsWith('/history') ? styles.active : ''}`}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 3v18h18" />
           <path d="M7 16l4-4 4 4 5-5" />
         </svg>
-        History
+        Overview
       </a>
       <a href="/settings" class={linkClass('/settings')}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

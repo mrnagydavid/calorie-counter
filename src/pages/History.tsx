@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { route } from 'preact-router'
 import { useEffect, useMemo, useState } from 'preact/hooks'
+import { NutritionOverview } from '../components/NutritionOverview'
 import { WeightChart } from '../components/WeightChart'
 import { getTargetsForRange } from '../db/dailyTargets'
 import { formatDate } from '../db/dates'
@@ -16,7 +17,7 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-type HistoryTab = 'calories' | 'weight'
+type HistoryTab = 'calories' | 'weight' | 'nutrition'
 
 export function History() {
   const today = useToday()
@@ -137,7 +138,7 @@ export function History() {
   return (
     <div class={styles.page}>
       <div class={styles.header}>
-        <h1 class={styles.headerTitle}>History</h1>
+        <h1 class={styles.headerTitle}>Overview</h1>
       </div>
 
       <div class={styles.tabs}>
@@ -152,6 +153,12 @@ export function History() {
           onClick={() => setTab('weight')}
         >
           Weight
+        </button>
+        <button
+          class={`${styles.tab} ${tab === 'nutrition' ? styles.tabActive : ''}`}
+          onClick={() => setTab('nutrition')}
+        >
+          Nutrition
         </button>
       </div>
 
@@ -224,7 +231,7 @@ export function History() {
             </div>
           </div>
         </>
-      ) : (
+      ) : tab === 'weight' ? (
         <>
           <div class={styles.monthNav}>
             <button class={styles.monthArrow} onClick={() => setWeightYear(weightYear - 1)}>
@@ -274,6 +281,8 @@ export function History() {
             </div>
           )}
         </>
+      ) : (
+        <NutritionOverview />
       )}
     </div>
   )

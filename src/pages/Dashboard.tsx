@@ -193,7 +193,13 @@ export function Dashboard() {
       )}
 
       <CalorieBudgetBar consumed={consumed} target={target} />
-      <NutritionSummary intakes={intakes} />
+      <NutritionSummary
+        intakes={intakes}
+        row={storedTarget}
+        burned={burned}
+        isToday={date === today}
+        saltUnit={settings.saltUnit}
+      />
       <EntryList intakes={intakes} burns={burns} weightEntry={weightEntry} />
       <Fab date={date} remaining={remaining} onScanBarcode={() => setScanning(true)} />
       {scanning && (

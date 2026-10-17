@@ -19,7 +19,7 @@ export async function getOrCreateSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(
-  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil' | 'maxHr' | 'lastWeightKg' | 'dataVersion'>>,
+  updates: Partial<Pick<Settings, 'baselineCalories' | 'dayOverrides' | 'exportReminderEnabled' | 'exportReminderDismissedUntil' | 'maxHr' | 'lastWeightKg' | 'dataVersion' | 'nutrientGoals' | 'saltUnit'>>,
 ): Promise<void> {
   const current = await getOrCreateSettings()
   const updated = {
@@ -29,8 +29,8 @@ export async function updateSettings(
   }
   await db.settings.put(updated)
 
-  // Keep today's daily target in sync when calorie settings change
-  if ('baselineCalories' in updates || 'dayOverrides' in updates) {
+  // Keep today's row in sync when the calorie settings or the goals change
+  if ('baselineCalories' in updates || 'dayOverrides' in updates || 'nutrientGoals' in updates) {
     await updateTodayTarget(updated)
   }
 }

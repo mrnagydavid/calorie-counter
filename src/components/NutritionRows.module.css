@@ -27,3 +27,40 @@
 .subRow .value {
   font-weight: 500;
 }
+
+/* With goals: label | bar | value. The label column fits the longest label. */
+.grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: center;
+}
+
+.label,
+.subLabel {
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.subLabel {
+  padding-left: 16px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.barCell {
+  min-width: 0;
+}
+
+.grid .value {
+  text-align: right;
+}
+
+.subValue {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--color-text-secondary);
+}

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type IntakeEntry, type BurnEntry, type WeightEntry } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
+import { refreshTodayWeight } from '../db/dailyTargets'
 import { calcNetKcal, activityName, toActivity } from '../services/activityEnergy'
 import { NumericInput } from './NumericInput'
 import { EntryEditor } from './EntryEditor'
@@ -57,6 +58,7 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
   const handleWeightDelete = useCallback(async () => {
     if (!weightEntry) return
     await db.weightEntries.delete(weightEntry.id)
+    await refreshTodayWeight(weightEntry.date)
     setExpandedId(null)
     setEditingId(null)
   }, [weightEntry])
@@ -66,6 +68,7 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
     const w = parseFloat(editWeight)
     if (!w || w <= 0) return
     await db.weightEntries.update(weightEntry.id, { weight: w })
+    await refreshTodayWeight(weightEntry.date)
     setEditingId(null)
     setExpandedId(null)
   }, [weightEntry, editWeight])
