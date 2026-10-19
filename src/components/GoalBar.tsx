@@ -1,4 +1,4 @@
-import { GREEN, GREY, overColor } from '../utils/barColor'
+import { GREEN, GREY, overColor, underColor } from '../utils/barColor'
 import type { GoalKind } from '../utils/goals'
 import styles from './GoalBar.module.css'
 
@@ -11,6 +11,8 @@ export interface GoalBarData {
   kind: GoalKind
   /** For screen readers, because the goal number is not shown as text. */
   label: string
+  /** A past day. Under a minimum, its bar shows the result; today's bar is only "not yet". */
+  dayEnded: boolean
 }
 
 // The bars work like the calorie bar: the end of the bar is the maximum, and an amount above
@@ -24,13 +26,14 @@ function position(g: number, min?: number, max?: number): number {
 }
 
 /**
- * Grey under a minimum, green from the minimum on. Above a maximum, the calorie bar's warning:
- * orange from 105%, red from 120%. A maximum alone has no green, because it is not a target.
+ * Under a minimum: grey on today, because the day is not finished (as on the calorie bar); red
+ * to orange on a past day. Green from the minimum on, and from 0 under a maximum alone, because
+ * 0 is the best value there. Above a maximum, the calorie bar's warning: orange from 105%, red
+ * from 120%.
  */
-function fillColor(amount: number, min?: number, max?: number): string {
-  if (min !== undefined && amount < min) return GREY
-  const base = min !== undefined ? GREEN : GREY
-  return max === undefined ? base : overColor(amount / max, base)
+function fillColor(amount: number, dayEnded: boolean, min?: number, max?: number): string {
+  if (min !== undefined && amount < min) return dayEnded ? underColor(amount / min) : GREY
+  return max === undefined ? GREEN : overColor(amount / max, GREEN)
 }
 
 export function GoalBar(props: GoalBarData) {
@@ -43,7 +46,7 @@ export function GoalBar(props: GoalBarData) {
       <div class={styles.track}>
         <div
           class={styles.fill}
-          style={{ width: `${position(props.amount, min, max)}%`, background: fillColor(props.amount, min, max) }}
+          style={{ width: `${position(props.amount, min, max)}%`, background: fillColor(props.amount, props.dayEnded, min, max) }}
         />
       </div>
       {/* The tip of the triangle sits on the minimum. The maximum is the end of the bar. */}

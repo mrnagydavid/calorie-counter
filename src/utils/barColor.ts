@@ -26,3 +26,11 @@ export function overColor(ratio: number, from: string): string {
   if (ratio <= 1.2) return lerpColor(YELLOW, RED, (ratio - 1.1) / 0.1)
   return RED
 }
+
+/** The mirror of `overColor` under a minimum: red up to 80%, yellow at 90%, green from 100%. */
+export function underColor(ratio: number): string {
+  if (ratio <= 0.8) return RED
+  if (ratio <= 0.9) return lerpColor(RED, YELLOW, (ratio - 0.8) / 0.1)
+  if (ratio < 1) return lerpColor(YELLOW, GREEN, (ratio - 0.9) / 0.1)
+  return GREEN
+}

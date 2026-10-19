@@ -44,7 +44,7 @@ function readOpen(): boolean {
 const g = (n: number) => String(n < 10 ? Math.round(n * 10) / 10 : Math.round(n))
 
 /** A bar for each goal in the day's copy, in grams of that day. */
-function goalBars(sums: NutrientSums, row: DailyTarget | undefined, burned: number) {
+function goalBars(sums: NutrientSums, row: DailyTarget | undefined, burned: number, dayEnded: boolean) {
   const bars: Partial<Record<RowKey, GoalBarData>> = {}
   if (!row?.nutrientGoals) return bars
   for (const key of GOAL_KEYS) {
@@ -59,7 +59,7 @@ function goalBars(sums: NutrientSums, row: DailyTarget | undefined, burned: numb
         : min !== undefined
           ? `Goal: at least ${g(min)} g`
           : `Goal: at most ${g(max!)} g`
-    bars[ROW_OF_GOAL[key]] = { amount: goalTotal(sums, key).total, min, max, kind: GOALS[key].kind, label }
+    bars[ROW_OF_GOAL[key]] = { amount: goalTotal(sums, key).total, min, max, kind: GOALS[key].kind, label, dayEnded }
   }
   return bars
 }
@@ -80,7 +80,8 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: Nu
 
   const sums = sumNutrients(intakes)
   const hasData = NUTRIENT_KEYS.some((key) => sums.totals[key].count > 0)
-  const bars = goalBars(sums, row, burned)
+  // Today cannot go to a future day, so every other day has ended
+  const bars = goalBars(sums, row, burned, !isToday)
   const hasBars = Object.keys(bars).length > 0
   const hasHabitGoal = Object.values(bars).some((b) => b.kind === 'habit')
   const coverage = kcalCoverage(intakes)
