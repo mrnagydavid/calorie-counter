@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { db, type Nutrients } from '../db/index'
+import { applyCustomFoodAction } from '../db/customFoods'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { FeatureIntro } from '../components/FeatureIntro'
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
@@ -81,7 +82,7 @@ export function RecipeCalculator() {
     setExpandedId(null)
   }
 
-  const handleFoodPicked = useCallback((result: FoodPickerResult) => {
+  const handleFoodPicked = useCallback(async (result: FoodPickerResult) => {
     let ingredientKcalPer100g: number
     let grams: number
 
@@ -105,6 +106,8 @@ export function RecipeCalculator() {
       totalNutrients: result.unitNutrients && scaleNutrients(result.unitNutrients, result.quantity),
     }])
     setPicking(false)
+    // The same tick as Add intake, so a food typed in for a recipe can be kept in My foods
+    await applyCustomFoodAction(result)
   }, [])
 
   const handleSave = async () => {
@@ -272,6 +275,7 @@ export function RecipeCalculator() {
           date={date}
           onSelect={handleFoodPicked}
           onClose={() => setPicking(false)}
+          showSaveAsCustom
         />
       )}
     </div>

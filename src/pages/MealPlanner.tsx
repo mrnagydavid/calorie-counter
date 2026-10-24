@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type Nutrients } from '../db/index'
 import { getOrCreateSettings } from '../db/settings'
+import { applyCustomFoodAction } from '../db/customFoods'
 import { todayString } from '../db/dates'
 import { getTargetForDate } from '../db/dailyTargets'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
@@ -94,7 +95,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const ratio = budget > 0 ? draftTotal / budget : 0
   const pct = Math.min(ratio * 100, 100)
 
-  const handleFoodPicked = useCallback((result: FoodPickerResult) => {
+  const handleFoodPicked = useCallback(async (result: FoodPickerResult) => {
     setItems((prev) => [...prev, {
       id: crypto.randomUUID(),
       name: result.name,
@@ -105,6 +106,8 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
       unit: result.unit,
     }])
     setPicking(false)
+    // The same tick as Add intake, so a planned food can be kept in My foods
+    await applyCustomFoodAction(result)
   }, [])
 
   const removeItem = (id: string) => {
@@ -240,6 +243,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
           date={date}
           onSelect={handleFoodPicked}
           onClose={() => setPicking(false)}
+          showSaveAsCustom
         />
       )}
     </div>
