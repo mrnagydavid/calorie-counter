@@ -91,19 +91,19 @@ export function Dashboard() {
     )
   }, [weightEntries])
 
-  // --- On-track stats (last 7d / 30d) ---
-  // The 30 days before today, newest first. Keyed on today so the window rolls with the date
+  // --- On-track stats (last 7d / 28d) ---
+  // The 28 days before today, newest first. Keyed on today so the window rolls with the date
   // instead of freezing at whatever day the screen mounted on.
-  const past30Days = useMemo(() => {
+  const past28Days = useMemo(() => {
     const days: string[] = []
-    for (let i = 1; i <= 30; i++) {
+    for (let i = 1; i <= 28; i++) {
       days.push(shiftDate(today, -i))
     }
     return days
   }, [today])
 
-  const statsStart = past30Days[past30Days.length - 1]
-  const statsEnd = past30Days[0]
+  const statsStart = past28Days[past28Days.length - 1]
+  const statsEnd = past28Days[0]
 
   const statsIntakes = useLiveQuery(
     () => db.intakeEntries.where('date').between(statsStart, statsEnd, true, true).toArray(),
@@ -118,8 +118,8 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!settings) return
-    getTargetsForRange(past30Days, settings).then(setStatsTargets)
-  }, [settings, past30Days])
+    getTargetsForRange(past28Days, settings).then(setStatsTargets)
+  }, [settings, past28Days])
 
   const stats = useMemo(() => {
     if (!statsIntakes || !statsBurns || !statsTargets || !settings) return null
@@ -152,10 +152,10 @@ export function Dashboard() {
     }
 
     return {
-      avg7: computeAvg(past30Days.slice(0, 7)),
-      avg30: computeAvg(past30Days),
+      avg7: computeAvg(past28Days.slice(0, 7)),
+      avg28: computeAvg(past28Days),
     }
-  }, [statsIntakes, statsBurns, statsTargets, settings, past30Days])
+  }, [statsIntakes, statsBurns, statsTargets, settings, past28Days])
 
   if (!settings || baseTarget == null || !intakes || !burns) return null
 
@@ -170,7 +170,7 @@ export function Dashboard() {
       <ExportReminderBanner settings={settings} />
       <DateNav date={date} onDateChange={setDate} />
 
-      {date === today && stats && (stats.avg7 != null || stats.avg30 != null) && (
+      {date === today && stats && (stats.avg7 != null || stats.avg28 != null) && (
         <div class={styles.statsCard}>
           <div class={styles.statsTitle}>Average daily difference from goal</div>
           {stats.avg7 != null && (
@@ -181,11 +181,11 @@ export function Dashboard() {
               </span>
             </div>
           )}
-          {stats.avg30 != null && (
+          {stats.avg28 != null && (
             <div class={styles.statsRow}>
-              <span class={styles.statsLabel}>in the last 30 days</span>
-              <span class={`${styles.statsLabel} ${stats.avg30 <= 0 ? styles.statsGreen : styles.statsRed}`}>
-                {stats.avg30 > 0 ? '+' : ''}{stats.avg30}
+              <span class={styles.statsLabel}>in the last 28 days</span>
+              <span class={`${styles.statsLabel} ${stats.avg28 <= 0 ? styles.statsGreen : styles.statsRed}`}>
+                {stats.avg28 > 0 ? '+' : ''}{stats.avg28}
               </span>
             </div>
           )}
