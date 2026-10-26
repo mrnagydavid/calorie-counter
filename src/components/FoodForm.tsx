@@ -165,7 +165,8 @@ export function FoodForm({
     setNutrientInputs((prev) => ({ ...prev, [key]: value }))
   }, [])
 
-  const canSubmit = cal > 0 && (!nameRequired || name.trim().length > 0)
+  // 0 kcal is fine when a nutrient is known: salt, for a salt goal
+  const canSubmit = (cal > 0 || hasNutrients(nutritionResult)) && (!nameRequired || name.trim().length > 0)
 
   const handleUnitChange = useCallback((newUnit: string) => {
     setUnit(newUnit)

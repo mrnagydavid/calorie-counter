@@ -103,26 +103,31 @@ function extractVariants(
   const baseUnit = isLiquid(quantity) ? '100ml' : '100g'
 
   // Per 100g/100ml — add first so it's the default selection
-  const kcal100 = readNumber(nutriments, 'energy-kcal_100g')
-  const kj100 = readNumber(nutriments, 'energy-kj_100g')
-  const nutrients100 = extractNutrients(nutriments, '100g')
-  if (kcal100 && kcal100 > 0) {
-    variants.push({ kcal: Math.round(kcal100), unit: baseUnit, nutrients: nutrients100 })
-  } else if (kj100 && kj100 > 0) {
-    variants.push({ kcal: Math.round(kj100 / 4.184), unit: baseUnit, nutrients: nutrients100 })
+  const kcal100 = readKcal(nutriments, '100g')
+  if (kcal100 !== undefined) {
+    variants.push({ kcal: kcal100, unit: baseUnit, nutrients: extractNutrients(nutriments, '100g') })
   }
 
   // Per serving
-  const kcalServing = readNumber(nutriments, 'energy-kcal_serving')
-  const kjServing = readNumber(nutriments, 'energy-kj_serving')
-  const nutrientsServing = extractNutrients(nutriments, 'serving', servingGrams(servingSize))
-  if (kcalServing && kcalServing > 0) {
-    variants.push({ kcal: Math.round(kcalServing), unit: 'serving', servingSize, nutrients: nutrientsServing })
-  } else if (kjServing && kjServing > 0) {
-    variants.push({ kcal: Math.round(kjServing / 4.184), unit: 'serving', servingSize, nutrients: nutrientsServing })
+  const kcalServing = readKcal(nutriments, 'serving')
+  if (kcalServing !== undefined) {
+    const nutrients = extractNutrients(nutriments, 'serving', servingGrams(servingSize))
+    variants.push({ kcal: kcalServing, unit: 'serving', servingSize, nutrients })
   }
 
   return variants
+}
+
+/**
+ * kcal, from kJ when the kcal field is missing. A 0 counts only when no field gives more:
+ * salt and water are 0 kcal, and are still found.
+ */
+function readKcal(nutriments: OFFNutriments, suffix: '100g' | 'serving'): number | undefined {
+  const kcal = readNumber(nutriments, `energy-kcal_${suffix}`)
+  const kj = readNumber(nutriments, `energy-kj_${suffix}`)
+  if (kcal) return Math.round(kcal)
+  if (kj) return Math.round(kj / 4.184)
+  return kcal ?? kj
 }
 
 const TIMEOUT_MS = 8000
