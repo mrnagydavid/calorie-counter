@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks'
 import type { DailyTarget, GoalKey, IntakeEntry } from '../db/index'
-import { dayKcal, goalTotal, kcalCoverage } from '../utils/goalProgress'
-import { GOAL_KEYS, GOALS, goalGrams, hasLimit } from '../utils/goals'
+import { dayGoalRanges, goalTotal, kcalCoverage } from '../utils/goalProgress'
+import { GOALS } from '../utils/goals'
 import {
   NUTRIENT_KEYS,
   formatNutrient,
@@ -10,7 +10,7 @@ import {
   type NutrientKey,
   type NutrientSums,
 } from '../utils/nutrients'
-import type { GoalBarData } from './GoalBar'
+import { goalLabel, type GoalBarData } from './GoalBar'
 import { NutritionRows, type RowKey } from './NutritionRows'
 import styles from './NutritionSummary.module.css'
 
@@ -41,25 +41,18 @@ function readOpen(): boolean {
   }
 }
 
-const g = (n: number) => String(n < 10 ? Math.round(n * 10) / 10 : Math.round(n))
-
 /** A bar for each goal in the day's copy, in grams of that day. */
 function goalBars(sums: NutrientSums, row: DailyTarget | undefined, burned: number, dayEnded: boolean) {
   const bars: Partial<Record<RowKey, GoalBarData>> = {}
-  if (!row?.nutrientGoals) return bars
-  for (const key of GOAL_KEYS) {
-    const goal = row.nutrientGoals[key]
-    if (!hasLimit(goal)) continue
-    const grams = goalGrams(goal, key, { kcal: dayKcal(row, burned), weightKg: row.weightKg })
-    if (!grams) continue
-    const { min, max } = grams
-    const label =
-      min !== undefined && max !== undefined
-        ? `Goal: ${g(min)}–${g(max)} g`
-        : min !== undefined
-          ? `Goal: at least ${g(min)} g`
-          : `Goal: at most ${g(max!)} g`
-    bars[ROW_OF_GOAL[key]] = { amount: goalTotal(sums, key).total, min, max, kind: GOALS[key].kind, label, dayEnded }
+  for (const { key, min, max } of dayGoalRanges(row, burned)) {
+    bars[ROW_OF_GOAL[key]] = {
+      amount: goalTotal(sums, key).total,
+      min,
+      max,
+      kind: GOALS[key].kind,
+      label: goalLabel(min, max),
+      dayEnded,
+    }
   }
   return bars
 }

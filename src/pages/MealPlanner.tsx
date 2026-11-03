@@ -10,9 +10,11 @@ import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 import { FeatureIntro } from '../components/FeatureIntro'
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
+import { PlannerGoals, itemGoalLine } from '../components/PlannerGoals'
 import { useDraftCache } from '../hooks/useDraftCache'
 import { barColor } from '../utils/barColor'
-import { entryNutrients } from '../utils/nutrients'
+import { dayGoalRanges } from '../utils/goalProgress'
+import { entryNutrients, sumNutrients } from '../utils/nutrients'
 import styles from './MealPlanner.module.css'
 
 interface MealPlannerDraft {
@@ -79,9 +81,9 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
     }
   }, [date, settings, storedTarget])
 
+  const burned = burns?.reduce((sum, e) => sum + e.calories, 0) ?? 0
   const remaining = (() => {
     if (baseTarget == null || !intakes || !burns) return null
-    const burned = burns.reduce((sum, e) => sum + e.calories, 0)
     const target = baseTarget + burned
     const consumed = intakes.reduce((sum, e) => sum + e.calories, 0)
     return target - consumed
@@ -94,6 +96,10 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const budgetLeft = budget - draftTotal
   const ratio = budget > 0 ? draftTotal / budget : 0
   const pct = Math.min(ratio * 100, 100)
+
+  // "% of kcal" goals use the day's target with burns, as on Today. The budget is for kcal only.
+  const goals = dayGoalRanges(storedTarget, burned)
+  const saltUnit = settings?.saltUnit
 
   const handleFoodPicked = useCallback(async (result: FoodPickerResult) => {
     setItems((prev) => [...prev, {
@@ -187,6 +193,19 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
         </div>
       </div>
 
+      {goals.length > 0 && (
+        <div class={styles.section}>
+          <div class={styles.sectionTitle}>Nutrition goals</div>
+          <PlannerGoals
+            goals={goals}
+            eaten={sumNutrients(intakes ?? [])}
+            planned={sumNutrients(items)}
+            dayEnded={date < todayString()}
+            saltUnit={saltUnit}
+          />
+        </div>
+      )}
+
       {/* Draft items */}
       {items.length > 0 && (
         <div class={styles.section}>
@@ -203,6 +222,10 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
                 </div>
                 {expandedId === item.id && (
                   <div class={styles.itemActions}>
+                    {(() => {
+                      const line = itemGoalLine(sumNutrients([item]), goals, saltUnit)
+                      return line && <div class={styles.itemNutrients}>{line}</div>
+                    })()}
                     <button class={styles.deleteButton} onClick={() => removeItem(item.id)}>
                       Remove
                     </button>

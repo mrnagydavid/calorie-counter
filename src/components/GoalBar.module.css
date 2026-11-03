@@ -24,6 +24,16 @@
   border-radius: 3px;
 }
 
+/* The same color as the amount, lighter: not eaten yet */
+.plannedFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 3px;
+  opacity: 0.4;
+}
+
 .minMark {
   position: absolute;
   top: 0;

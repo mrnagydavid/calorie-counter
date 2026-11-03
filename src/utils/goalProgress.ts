@@ -1,6 +1,6 @@
 import type { DailyTarget, GoalKey, GoalUnit, IntakeEntry } from '../db/index'
 import { formatDate, parseDate, shiftDate } from '../db/dates'
-import { fromGrams, goalGrams, hasLimit, SODIUM_MG_PER_SALT_G, type GramRange } from './goals'
+import { fromGrams, GOAL_KEYS, goalGrams, hasLimit, SODIUM_MG_PER_SALT_G, type GramRange } from './goals'
 import { hasNutrients, sumNutrients, type NutrientSums, type NutrientTotal } from './nutrients'
 
 /** What the progress screens need of one day. */
@@ -15,6 +15,22 @@ export interface DayData {
 /** The kcal a day's "% of kcal" goals use: the base target plus that day's burns. */
 export function dayKcal(row: DailyTarget, burned: number): number {
   return row.target + burned
+}
+
+export interface DayGoalRange extends GramRange {
+  key: GoalKey
+}
+
+/** The goals in a day's copy, in grams of that day. A goal that has no grams (g/kg with no weight) is left out. */
+export function dayGoalRanges(row: DailyTarget | undefined, burned: number): DayGoalRange[] {
+  const goals = row?.nutrientGoals
+  if (!row || !goals) return []
+  const ctx = { kcal: dayKcal(row, burned), weightKg: row.weightKg }
+  return GOAL_KEYS.flatMap((key) => {
+    const goal = goals[key]
+    const grams = hasLimit(goal) ? goalGrams(goal, key, ctx) : undefined
+    return grams ? [{ key, ...grams }] : []
+  })
 }
 
 /** A nutrient's total. Unsaturated fat counts only entries with both fat and saturated fat. */

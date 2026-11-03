@@ -146,6 +146,12 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.itemNutrients {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
 .deleteButton {
   padding: 6px 16px;
   border-radius: var(--radius-md);
