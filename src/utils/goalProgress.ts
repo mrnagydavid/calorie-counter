@@ -144,24 +144,60 @@ export function averageInUnit(days: DayData[], key: GoalKey, unit: GoalUnit, wei
   return fromGrams(amount / counted.length, unit, key, { kcal: kcal / counted.length, weightKg })
 }
 
-export type DayMark = 'met' | 'missed' | 'none'
+export type DayMark = 'met' | 'close' | 'missed' | 'none'
+
+/**
+ * A missed day is "close" when it misses by this share of the goal or less. At the same point
+ * the bar on Today turns yellow, so the two screens agree.
+ */
+export const CLOSE_SHARE = 0.1
+
+function isClose(amount: number, grams: GramRange): boolean {
+  if (grams.max !== undefined && amount > grams.max) return amount <= grams.max * (1 + CLOSE_SHARE)
+  if (grams.min !== undefined && amount < grams.min) return amount >= grams.min * (1 - CLOSE_SHARE)
+  return true
+}
 
 /** A daily goal on one day. "none": no goal, or the day does not count. */
 export function dayMark(day: DayData, key: GoalKey): DayMark {
   const g = dayGoal(day, key)
   if (!g) return 'none'
-  return statusOf(g.amount, g.grams) === 'within' ? 'met' : 'missed'
+  if (statusOf(g.amount, g.grams) === 'within') return 'met'
+  return isClose(g.amount, g.grams) ? 'close' : 'missed'
 }
 
 export interface DailyResult {
   met: number
+  close: number
   counted: number
   marks: DayMark[]
 }
 
 export function dailyResult(days: DayData[], key: GoalKey): DailyResult {
   const marks = days.map((d) => dayMark(d, key))
-  return { met: marks.filter((m) => m === 'met').length, counted: marks.filter((m) => m !== 'none').length, marks }
+  const count = (mark: DayMark) => marks.filter((m) => m === mark).length
+  return { met: count('met'), close: count('close'), counted: marks.length - count('none'), marks }
+}
+
+/** A whole number for % and g, two decimals for g/kg. */
+const DAY_DECIMALS: Record<GoalUnit, number> = { pctKcal: 0, g: 0, gPerKg: 2, gPer1000Kcal: 1 }
+
+/**
+ * A counted day's amount in a goal's unit, for a calendar cell: "44%", "182 g", "1.15". A missed
+ * day rounds away from its goal, so a cell never shows "45%" for a day under a minimum of 45%.
+ */
+export function dayAmountText(day: DayData, key: GoalKey, unit: GoalUnit, weightKg?: number): string | undefined {
+  const g = dayGoal(day, key)
+  if (!g) return undefined
+  const value = fromGrams(g.amount, unit, key, { kcal: g.kcal, weightKg: day.row?.weightKg ?? weightKg })
+  if (value === undefined) return undefined
+  const factor = 10 ** DAY_DECIMALS[unit]
+  const status = statusOf(g.amount, g.grams)
+  // The tolerance keeps float noise from moving a number: 1.15 * 100 is 114.99999999999999
+  const scaled = value * factor
+  const rounded = status === 'below' ? Math.floor(scaled + 1e-9) : status === 'above' ? Math.ceil(scaled - 1e-9) : Math.round(scaled)
+  const text = (rounded / factor).toFixed(DAY_DECIMALS[unit])
+  return unit === 'pctKcal' ? `${text}%` : unit === 'g' ? `${text} g` : text
 }
 
 /** The N days before today, oldest first. Today counts after it ends. */

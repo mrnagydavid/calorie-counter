@@ -5,6 +5,8 @@ export const CAVEAT = 'Foods without nutrient data are missing from these number
 
 export const COUNT_RULE = 'A day counts when at least half of its kcal has nutrient data. Today counts after it ends.'
 
+export const CLOSE_RULE = 'A day is close when it misses the goal by 10% or less.'
+
 export const STATUS_TEXT: Record<GoalStatus, string> = {
   within: 'Within goal',
   above: 'Above goal',

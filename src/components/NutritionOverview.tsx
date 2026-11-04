@@ -14,12 +14,13 @@ import {
   habitResult,
   inUnit,
   weeksBefore,
+  type DailyResult,
   type DayData,
   type DayMark,
 } from '../utils/goalProgress'
 import { activeGoals, describeGoal, GOAL_KEYS, GOALS } from '../utils/goals'
 import { GoalDetail } from './GoalDetail'
-import { capitalize, CAVEAT, COUNT_RULE, STATUS_TEXT } from './goalTexts'
+import { capitalize, CAVEAT, CLOSE_RULE, COUNT_RULE, STATUS_TEXT } from './goalTexts'
 import styles from './NutritionOverview.module.css'
 
 const WEEKS = 26
@@ -65,7 +66,7 @@ export function NutritionOverview() {
         </button>
       ))}
       {hasDaily && <Legend />}
-      <p class={styles.rule}>{COUNT_RULE}</p>
+      <p class={styles.rule}>{hasDaily ? `${COUNT_RULE} ${CLOSE_RULE}` : COUNT_RULE}</p>
 
       {detail && goals[detail] && (
         <GoalDetail
@@ -122,20 +123,21 @@ function HabitCard({ goalKey, goal, last7, last28, weightKg, saltUnit }: HabitCa
 function DailyCard({ goalKey, last7, last28 }: { goalKey: GoalKey; last7: DayData[]; last28: DayData[] }) {
   const d7 = dailyResult(last7, goalKey)
   const d28 = dailyResult(last28, goalKey)
-  const met = (r: { met: number; counted: number }) => (r.counted > 0 ? `${r.met} of ${r.counted}` : '–')
+  const stat = (label: string, r: DailyResult) => (
+    <span class={styles.stat}>
+      <span class={styles.statLabel}>{label}</span>
+      <span class={styles.statValue}>{r.counted > 0 ? `${r.met} of ${r.counted}` : '–'}</span>
+      {r.close > 0 && <span class={styles.statClose}>+ {r.close} close</span>}
+    </span>
+  )
+  const off = d28.counted - d28.met - d28.close
   return (
     <>
-      <span class={styles.stats}>
-        <span class={styles.stat}>
-          <span class={styles.statLabel}>7 days</span>
-          <span class={styles.statValue}>{met(d7)}</span>
-        </span>
-        <span class={styles.stat}>
-          <span class={styles.statLabel}>28 days</span>
-          <span class={styles.statValue}>{met(d28)}</span>
-        </span>
+      <span class={`${styles.stats} ${styles.statsDaily}`}>
+        {stat('7 days', d7)}
+        {stat('28 days', d28)}
       </span>
-      <span class={styles.strip} role="img" aria-label={`Last 28 days: ${d28.met} met, ${d28.counted - d28.met} not met`}>
+      <span class={styles.strip} role="img" aria-label={`Last 28 days: ${d28.met} met, ${d28.close} close, ${off} off`}>
         {d28.marks.map((m, i) => <span key={i} class={`${styles.mark} ${MARK_CLASS[m]}`} />)}
       </span>
     </>
@@ -144,6 +146,7 @@ function DailyCard({ goalKey, last7, last28 }: { goalKey: GoalKey; last7: DayDat
 
 const MARK_CLASS: Record<DayMark, string> = {
   met: styles.markMet,
+  close: styles.markClose,
   missed: styles.markMissed,
   none: styles.markNone,
 }
@@ -152,7 +155,8 @@ function Legend() {
   return (
     <div class={styles.legend}>
       <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markMet}`} />Met</span>
-      <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markMissed}`} />Not met</span>
+      <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markClose}`} />Close</span>
+      <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markMissed}`} />Off</span>
       <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markNone}`} />Not counted</span>
     </div>
   )

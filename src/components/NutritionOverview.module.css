@@ -66,6 +66,16 @@
   flex-direction: column;
 }
 
+/* A "close" line under one value must not push the other value down */
+.statsDaily {
+  align-items: flex-start;
+}
+
+.statClose {
+  font-size: 12px;
+  color: #047857;
+}
+
 .statLabel {
   font-size: 12px;
   color: var(--color-text-secondary);
@@ -111,6 +121,10 @@
 
 .markMet {
   background: var(--color-green);
+}
+
+.markClose {
+  background: #a7f3d0;
 }
 
 .markMissed {

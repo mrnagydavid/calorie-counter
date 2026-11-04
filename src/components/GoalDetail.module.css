@@ -161,7 +161,21 @@
 }
 
 .barDaily {
-  background: var(--color-text-secondary);
+  background: var(--color-green);
+}
+
+.barClose {
+  background: #a7f3d0;
+}
+
+/* Close days on top of the met days */
+.stack {
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.stack .bar + .bar {
+  border-radius: 0;
 }
 
 /* One piece for each week, so the line steps where the goal changed */
@@ -253,23 +267,35 @@
 
 .cell {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 40px;
+  height: 44px;
   border-radius: 8px;
   font-size: 13px;
   box-sizing: border-box;
 }
 
+.cellValue {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
 .cellMet {
-  background: #d1fae5;
+  background: var(--color-green);
+  color: white;
+  font-weight: 600;
+}
+
+.cellClose {
+  background: #a7f3d0;
   color: #065f46;
   font-weight: 600;
 }
 
 .cellMissed {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fcd34d;
+  color: #78350f;
   font-weight: 600;
 }
 

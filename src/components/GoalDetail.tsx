@@ -3,6 +3,7 @@ import { parseDate, shiftDate } from '../db/dates'
 import {
   averageInUnit,
   dailyResult,
+  dayAmountText,
   daysBefore,
   formatInUnit,
   habitResult,
@@ -14,7 +15,7 @@ import {
 } from '../utils/goalProgress'
 import { describeGoal, GOALS, matchPreset, SODIUM_MG_PER_SALT_G, UNIT_OPTIONS } from '../utils/goals'
 import { EditScreen } from './EditScreen'
-import { capitalize, CAVEAT, COUNT_RULE, STATUS_TEXT } from './goalTexts'
+import { capitalize, CAVEAT, CLOSE_RULE, COUNT_RULE, STATUS_TEXT } from './goalTexts'
 import styles from './GoalDetail.module.css'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -220,7 +221,7 @@ function MonthLabels({ weeks }: { weeks: string[][] }) {
   )
 }
 
-function DailyDetail({ goalKey, days, weeks, today }: GoalDetailProps) {
+function DailyDetail({ goalKey, goal, days, weeks, today, weightKg }: GoalDetailProps) {
   const last28Dates = daysBefore(today, 28)
   const d7 = dailyResult(pick(days, daysBefore(today, 7)), goalKey)
   const d28 = dailyResult(pick(days, last28Dates), goalKey)
@@ -229,16 +230,20 @@ function DailyDetail({ goalKey, days, weeks, today }: GoalDetailProps) {
   // Monday to Sunday, from the week of the first of the 28 days to the current week.
   const start = mondayOf(last28Dates[0])
   const end = shiftDate(mondayOf(today), 6)
-  const cells: { date: string; kind: DayMark | 'outside' | 'today' | 'future' }[] = []
+  const cells: { date: string; kind: DayMark | 'outside' | 'today' | 'future'; value?: string }[] = []
   for (let date = start; date <= end; date = shiftDate(date, 1)) {
     const kind = marks.get(date) ?? (date === today ? 'today' : date > today ? 'future' : 'outside')
-    cells.push({ date, kind })
+    // Only the 28 days get a value. A day that does not count has none.
+    const day = marks.has(date) ? days.get(date) : undefined
+    const value = day && dayAmountText(day, goalKey, goal.unit, weightKg)
+    cells.push({ date, kind, value })
   }
 
   const perWeek = weeks.map((dates) => {
     const r = dailyResult(pick(days, dates), goalKey)
-    return r.counted > 0 ? r.met : undefined
+    return r.counted > 0 ? r : undefined
   })
+  const close = (n: number) => (n > 0 ? ` · ${n} close` : '')
 
   return (
     <>
@@ -246,12 +251,12 @@ function DailyDetail({ goalKey, days, weeks, today }: GoalDetailProps) {
         <div class={styles.box}>
           <span class={styles.boxLabel}>Last 7 days</span>
           <span class={styles.boxValue}>{d7.counted > 0 ? `${d7.met} of ${d7.counted}` : '–'}</span>
-          <span class={styles.boxSub}>days met</span>
+          <span class={styles.boxSub}>days met{close(d7.close)}</span>
         </div>
         <div class={styles.box}>
           <span class={styles.boxLabel}>Last 28 days</span>
           <span class={styles.boxValue}>{d28.counted > 0 ? `${d28.met} of ${d28.counted}` : '–'}</span>
-          <span class={styles.boxSub}>days met · {28 - d28.counted} not counted</span>
+          <span class={styles.boxSub}>days met{close(d28.close)} · {28 - d28.counted} not counted</span>
         </div>
       </div>
 
@@ -259,38 +264,49 @@ function DailyDetail({ goalKey, days, weeks, today }: GoalDetailProps) {
         <h2 class={styles.chartTitle}>Last 28 days</h2>
         <div class={styles.calendar}>
           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i} class={styles.weekday}>{d}</span>)}
-          {cells.map(({ date, kind }) => (
-            <span key={date} class={`${styles.cell} ${CELL_CLASS[kind]}`} aria-label={`${date}: ${CELL_LABEL[kind]}`}>
+          {cells.map(({ date, kind, value }) => (
+            <span
+              key={date}
+              class={`${styles.cell} ${CELL_CLASS[kind]}`}
+              aria-label={`${date}: ${CELL_LABEL[kind]}${value ? `, ${value}` : ''}`}
+            >
               {parseDate(date).getDate()}
+              {value && <span class={styles.cellValue}>{value}</span>}
             </span>
           ))}
         </div>
         <div class={styles.legend}>
           <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.cellMet}`} />Met</span>
-          <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.cellMissed}`} />Not met</span>
+          <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.cellClose}`} />Close</span>
+          <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.cellMissed}`} />Off</span>
           <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.cellNone}`} />Not counted</span>
           <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.cellToday}`} />Today</span>
         </div>
-        <p class={styles.rule}>{COUNT_RULE}</p>
+        <p class={styles.rule}>{CLOSE_RULE} {COUNT_RULE}</p>
       </div>
 
       <div class={styles.chartBlock}>
         <h2 class={styles.chartTitle}>Days met per week</h2>
-        {perWeek.filter((n) => n !== undefined).length < 2 ? (
-          <p class={styles.rule}>{tooFewWeeks(perWeek.filter((n) => n !== undefined).length)}</p>
+        {perWeek.filter((r) => r !== undefined).length < 2 ? (
+          <p class={styles.rule}>{tooFewWeeks(perWeek.filter((r) => r !== undefined).length)}</p>
         ) : (
         <>
         <div class={styles.chart} role="img" aria-label={`Days met per week, last ${weeks.length} weeks`}>
           <div class={styles.sevenLine} style={{ bottom: `${(7 / 8) * 100}%` }}>
             <span>7 days</span>
           </div>
-          {perWeek.map((n, i) => (
-            <div key={i} class={styles.column}>
-              {n !== undefined && <div class={`${styles.bar} ${styles.barDaily}`} style={{ height: `${(n / 8) * 100}%` }} />}
+          {perWeek.map((r, i) => (
+            <div key={i} class={`${styles.column} ${styles.stack}`}>
+              {r && r.close > 0 && <div class={`${styles.bar} ${styles.barClose}`} style={{ height: `${(r.close / 8) * 100}%` }} />}
+              {r && r.met > 0 && <div class={`${styles.bar} ${styles.barDaily}`} style={{ height: `${(r.met / 8) * 100}%` }} />}
             </div>
           ))}
         </div>
         <MonthLabels weeks={weeks} />
+        <div class={styles.legend}>
+          <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.barDaily}`} />Met</span>
+          <span class={styles.legendItem}><span class={`${styles.swatch} ${styles.barClose}`} />Close</span>
+        </div>
         </>
         )}
       </div>
@@ -300,6 +316,7 @@ function DailyDetail({ goalKey, days, weeks, today }: GoalDetailProps) {
 
 const CELL_CLASS: Record<DayMark | 'outside' | 'today' | 'future', string> = {
   met: styles.cellMet,
+  close: styles.cellClose,
   missed: styles.cellMissed,
   none: styles.cellNone,
   today: styles.cellToday,
@@ -309,7 +326,8 @@ const CELL_CLASS: Record<DayMark | 'outside' | 'today' | 'future', string> = {
 
 const CELL_LABEL: Record<DayMark | 'outside' | 'today' | 'future', string> = {
   met: 'met',
-  missed: 'not met',
+  close: 'close to the goal',
+  missed: 'off the goal',
   none: 'not counted',
   today: 'today, counts after it ends',
   outside: 'outside the 28 days',
