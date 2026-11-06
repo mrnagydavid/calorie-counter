@@ -1,9 +1,11 @@
 import { Fragment } from 'preact'
 import type { GoalKey } from '../db/index'
-import { goalTotal, type DayGoalRange } from '../utils/goalProgress'
+import type { GramRange } from '../utils/goals'
+import { goalTotal, type LiveGoal } from '../utils/goalProgress'
 import { GOALS, SODIUM_MG_PER_SALT_G } from '../utils/goals'
 import { formatNutrient, type NutrientSums } from '../utils/nutrients'
-import { GoalBar, goalLabel } from './GoalBar'
+import { GoalBar, goalNotes, liveBar } from './GoalBar'
+import { GoalNotes } from './GoalNotes'
 import styles from './PlannerGoals.module.css'
 
 type SaltUnit = 'salt' | 'sodium'
@@ -18,7 +20,7 @@ function amountText(grams: number, key: GoalKey, saltUnit?: SaltUnit): string {
 }
 
 /** What is left after the plan: "0.9 g over", "14 g to go", "6.6 g left", or "Met" for a minimum alone. */
-function leftText(total: number, { key, min, max }: DayGoalRange, saltUnit?: SaltUnit): string {
+function leftText(total: number, key: GoalKey, { min, max }: GramRange, saltUnit?: SaltUnit): string {
   if (max !== undefined && total > max) return `${amountText(total - max, key, saltUnit)} over`
   if (min !== undefined && total < min) return `${amountText(min - total, key, saltUnit)} to go`
   if (max !== undefined) return `${amountText(max - total, key, saltUnit)} left`
@@ -26,40 +28,30 @@ function leftText(total: number, { key, min, max }: DayGoalRange, saltUnit?: Sal
 }
 
 interface PlannerGoalsProps {
-  /** The day's goals in grams. */
-  goals: DayGoalRange[]
-  eaten: NutrientSums
+  /** The day's goals with the plan counted as eaten (`liveGoals`). */
+  goals: LiveGoal[]
   planned: NutrientSums
-  /** A past day: under a minimum, the bar shows a result, as on Today. */
-  dayEnded: boolean
   saltUnit?: SaltUnit
 }
 
 /** A row for each goal: the day's amount plus the plan on a bar, and what is left after the plan. */
-export function PlannerGoals({ goals, eaten, planned, dayEnded, saltUnit }: PlannerGoalsProps) {
+export function PlannerGoals({ goals, planned, saltUnit }: PlannerGoalsProps) {
   return (
-    <div class={styles.grid}>
-      {goals.map((goal) => {
-        const { key, min, max } = goal
-        const amount = goalTotal(eaten, key).total
-        const plan = goalTotal(planned, key).total
-        return (
-          <Fragment key={key}>
-            <span class={styles.label}>{name(key, saltUnit)}</span>
-            <GoalBar
-              amount={amount}
-              planned={plan}
-              min={min}
-              max={max}
-              kind={GOALS[key].kind}
-              label={goalLabel(min, max)}
-              dayEnded={dayEnded}
-            />
-            <span class={styles.value}>{leftText(amount + plan, goal, saltUnit)}</span>
-          </Fragment>
-        )
-      })}
-    </div>
+    <>
+      <div class={styles.grid}>
+        {goals.map((goal) => {
+          const { key } = goal
+          return (
+            <Fragment key={key}>
+              <span class={styles.label}>{name(key, saltUnit)}</span>
+              <GoalBar {...liveBar(goal, GOALS[key].kind, goalTotal(planned, key).total)} />
+              <span class={styles.value}>{leftText(goal.amount, key, goal.goal, saltUnit)}</span>
+            </Fragment>
+          )
+        })}
+      </div>
+      <GoalNotes notes={goalNotes(goals, true)} />
+    </>
   )
 }
 
@@ -67,7 +59,7 @@ export function PlannerGoals({ goals, eaten, planned, dayEnded, saltUnit }: Plan
  * One item's grams of the nutrients with a goal: "Saturated fat 5.0 g · Fiber 3.0 g".
  * Null when the item has none of them.
  */
-export function itemGoalLine(sums: NutrientSums, goals: DayGoalRange[], saltUnit?: SaltUnit): string | null {
+export function itemGoalLine(sums: NutrientSums, goals: { key: GoalKey }[], saltUnit?: SaltUnit): string | null {
   const parts = goals.flatMap(({ key }) => {
     const { total, count } = goalTotal(sums, key)
     return count > 0 ? [`${name(key, saltUnit)} ${amountText(total, key, saltUnit)}`] : []

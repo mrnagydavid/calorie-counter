@@ -11,8 +11,8 @@ function lerpColor(c1: string, c2: string, t: number): string {
 
 export const GREY = '#6b7280'
 export const GREEN = '#10b981'
-const YELLOW = '#f59e0b'
-const RED = '#ef4444'
+export const YELLOW = '#f59e0b'
+export const RED = '#ef4444'
 
 export function barColor(ratio: number): string {
   if (ratio <= 0.95) return GREY

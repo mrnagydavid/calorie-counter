@@ -1,0 +1,18 @@
+/* The same style as the button, so the notes and the button look like one block */
+.note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* At the left, under the notes. The padding gives a 32px touch target and the 8px gap above. */
+.toggle {
+  display: block;
+  padding: 8px 0;
+  font-size: 13px;
+  line-height: 16px;
+  text-align: left;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

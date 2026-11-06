@@ -35,6 +35,12 @@ export interface GoalConfig {
   units: GoalUnit[]
   /** Needed to turn "% of kcal" into grams. */
   kcalPerGram?: number
+  /**
+   * For a minimum: the most grams per kcal that an ordinary food gives (no supplements). Today
+   * uses it to tell if the kcal left can still meet the minimum. Absent for a nutrient without
+   * kcal (salt), which can always be met.
+   */
+  mostPerKcal?: number
   kindNote: string
   presets: GoalPreset[]
 }
@@ -66,6 +72,8 @@ export const GOALS: Record<GoalKey, GoalConfig> = {
     hasMax: false,
     units: ['pctKcal'],
     kcalPerGram: 9,
+    // Rapeseed oil: 100 g fat, of which 7.4 g saturated, in 884 kcal (USDA SR Legacy)
+    mostPerKcal: 92.6 / 884,
     kindNote: `${HABIT_NOTE} One low day does not matter.`,
     // Monounsaturated 10% + polyunsaturated 5%: the sum of the Nordic minimums
     presets: [{ label: 'Nordic ≥ 15% (derived)', unit: 'pctKcal', min: 15 }],
@@ -78,6 +86,8 @@ export const GOALS: Record<GoalKey, GoalConfig> = {
     hasMax: true,
     units: ['pctKcal', 'g'],
     kcalPerGram: 9,
+    // Rapeseed oil: 100 g fat in 884 kcal (USDA SR Legacy)
+    mostPerKcal: 100 / 884,
     kindNote: `${HABIT_NOTE} One day does not matter.`,
     presets: [
       { label: 'EU · US 20–35%', unit: 'pctKcal', min: 20, max: 35 },
@@ -93,6 +103,8 @@ export const GOALS: Record<GoalKey, GoalConfig> = {
     hasMax: true,
     units: ['pctKcal', 'g', 'gPerKg'],
     kcalPerGram: 4,
+    // Sugar: 100 g carbohydrate in 387 kcal (USDA SR Legacy)
+    mostPerKcal: 100 / 387,
     kindNote: 'Judged day by day.',
     presets: [
       { label: 'EU · Nordic 45–60%', unit: 'pctKcal', min: 45, max: 60 },
@@ -119,6 +131,8 @@ export const GOALS: Record<GoalKey, GoalConfig> = {
     hasMin: true,
     hasMax: true,
     units: ['g', 'gPer1000Kcal'],
+    // Raspberries: 6.5 g fiber in 52 kcal (USDA SR Legacy)
+    mostPerKcal: 6.5 / 52,
     kindNote: `${HABIT_NOTE} One low day does not matter.`,
     presets: [
       { label: 'WHO · EU 25 g', unit: 'g', min: 25 },
@@ -135,6 +149,8 @@ export const GOALS: Record<GoalKey, GoalConfig> = {
     hasMax: true,
     units: ['gPerKg', 'pctKcal', 'g'],
     kcalPerGram: 4,
+    // Cod: 17.8 g protein in 82 kcal (USDA SR Legacy)
+    mostPerKcal: 17.8 / 82,
     kindNote: 'Judged day by day. Your body does not store protein.',
     presets: [
       { label: 'EU · WHO 0.83 g/kg', unit: 'gPerKg', min: 0.83 },

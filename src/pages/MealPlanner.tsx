@@ -13,7 +13,7 @@ import { NumericInput } from '../components/NumericInput'
 import { PlannerGoals, itemGoalLine } from '../components/PlannerGoals'
 import { useDraftCache } from '../hooks/useDraftCache'
 import { barColor } from '../utils/barColor'
-import { dayGoalRanges } from '../utils/goalProgress'
+import { liveGoals } from '../utils/goalProgress'
 import { entryNutrients, sumNutrients } from '../utils/nutrients'
 import styles from './MealPlanner.module.css'
 
@@ -97,8 +97,9 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
   const ratio = budget > 0 ? draftTotal / budget : 0
   const pct = Math.min(ratio * 100, 100)
 
-  // "% of kcal" goals use the day's target with burns, as on Today. The budget is for kcal only.
-  const goals = dayGoalRanges(storedTarget, burned)
+  // The plan counts as eaten. The planned kcal are the target with burns, as on Today: the
+  // budget is for kcal only.
+  const goals = liveGoals(storedTarget, burned, [...(intakes ?? []), ...items], date < todayString())
   const saltUnit = settings?.saltUnit
 
   const handleFoodPicked = useCallback(async (result: FoodPickerResult) => {
@@ -198,9 +199,7 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
           <div class={styles.sectionTitle}>Nutrition goals</div>
           <PlannerGoals
             goals={goals}
-            eaten={sumNutrients(intakes ?? [])}
             planned={sumNutrients(items)}
-            dayEnded={date < todayString()}
             saltUnit={saltUnit}
           />
         </div>

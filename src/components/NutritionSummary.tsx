@@ -1,16 +1,10 @@
 import { useState } from 'preact/hooks'
 import type { DailyTarget, GoalKey, IntakeEntry } from '../db/index'
-import { dayGoalRanges, goalTotal, kcalCoverage } from '../utils/goalProgress'
+import { kcalCoverage, liveGoals, type LiveGoal } from '../utils/goalProgress'
 import { GOALS } from '../utils/goals'
-import {
-  NUTRIENT_KEYS,
-  formatNutrient,
-  knownTotals,
-  sumNutrients,
-  type NutrientKey,
-  type NutrientSums,
-} from '../utils/nutrients'
-import { goalLabel, type GoalBarData } from './GoalBar'
+import { NUTRIENT_KEYS, formatNutrient, knownTotals, sumNutrients, type NutrientKey } from '../utils/nutrients'
+import { goalNotes, liveBar, type GoalBarData } from './GoalBar'
+import { GoalNotes } from './GoalNotes'
 import { NutritionRows, type RowKey } from './NutritionRows'
 import styles from './NutritionSummary.module.css'
 
@@ -41,19 +35,10 @@ function readOpen(): boolean {
   }
 }
 
-/** A bar for each goal in the day's copy, in grams of that day. */
-function goalBars(sums: NutrientSums, row: DailyTarget | undefined, burned: number, dayEnded: boolean) {
+/** A bar for each goal in the day's copy. */
+function goalBars(goals: LiveGoal[]) {
   const bars: Partial<Record<RowKey, GoalBarData>> = {}
-  for (const { key, min, max } of dayGoalRanges(row, burned)) {
-    bars[ROW_OF_GOAL[key]] = {
-      amount: goalTotal(sums, key).total,
-      min,
-      max,
-      kind: GOALS[key].kind,
-      label: goalLabel(min, max),
-      dayEnded,
-    }
-  }
+  for (const goal of goals) bars[ROW_OF_GOAL[goal.key]] = liveBar(goal, GOALS[goal.key].kind)
   return bars
 }
 
@@ -74,10 +59,21 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: Nu
   const sums = sumNutrients(intakes)
   const hasData = NUTRIENT_KEYS.some((key) => sums.totals[key].count > 0)
   // Today cannot go to a future day, so every other day has ended
-  const bars = goalBars(sums, row, burned, !isToday)
+  const goals = liveGoals(row, burned, intakes, !isToday)
+  const bars = goalBars(goals)
   const hasBars = Object.keys(bars).length > 0
   const hasHabitGoal = Object.values(bars).some((b) => b.kind === 'habit')
   const coverage = kcalCoverage(intakes)
+  const notes = [...goalNotes(goals)]
+  if (hasHabitGoal) {
+    notes.push(
+      'Some of these goals are judged on your average over weeks, not on one day. You can follow them best on the Overview.',
+    )
+  }
+  const warning =
+    hasBars && coverage < 1
+      ? `Nutrient data exists for only ${Math.floor(coverage * 100)}% of ${isToday ? 'today’s' : 'this day’s'} kcal, which means that the real amounts are probably higher than shown.`
+      : undefined
 
   const toggle = () => {
     const next = !open
@@ -109,18 +105,7 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: Nu
           {hasData ? (
             <>
               <NutritionRows {...knownTotals(sums)} goals={bars} saltUnit={saltUnit} />
-              {hasHabitGoal && (
-                <p class={styles.note}>
-                  Some of these goals are judged on your average over weeks, not on one day. You can follow them
-                  best on the Overview.
-                </p>
-              )}
-              {hasBars && coverage < 1 && (
-                <p class={styles.note}>
-                  Nutrient data exists for only {Math.floor(coverage * 100)}% of {isToday ? 'today’s' : 'this day’s'} kcal,
-                  which means that the real amounts are probably higher than shown.
-                </p>
-              )}
+              <GoalNotes notes={notes} warning={warning} />
             </>
           ) : (
             <div class={styles.empty}>No nutrition data for this day</div>

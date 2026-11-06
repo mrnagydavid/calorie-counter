@@ -1,6 +1,6 @@
 import type { DailyTarget, GoalKey, GoalUnit, IntakeEntry } from '../db/index'
 import { formatDate, parseDate, shiftDate } from '../db/dates'
-import { fromGrams, GOAL_KEYS, goalGrams, hasLimit, SODIUM_MG_PER_SALT_G, type GramRange } from './goals'
+import { fromGrams, GOAL_KEYS, GOALS, goalGrams, hasLimit, SODIUM_MG_PER_SALT_G, type GramRange } from './goals'
 import { hasNutrients, sumNutrients, type NutrientSums, type NutrientTotal } from './nutrients'
 
 /** What the progress screens need of one day. */
@@ -9,63 +9,124 @@ export interface DayData {
   /** The stored row. A day without a row, or without the goal in its copy, has no goal. */
   row?: DailyTarget
   intakes: IntakeEntry[]
-  burned: number
 }
 
-/** The kcal a day's "% of kcal" goals use: the base target plus that day's burns. */
-export function dayKcal(row: DailyTarget, burned: number): number {
-  return row.target + burned
-}
-
-export interface DayGoalRange extends GramRange {
-  key: GoalKey
-}
-
-/** The goals in a day's copy, in grams of that day. A goal that has no grams (g/kg with no weight) is left out. */
-export function dayGoalRanges(row: DailyTarget | undefined, burned: number): DayGoalRange[] {
-  const goals = row?.nutrientGoals
-  if (!row || !goals) return []
-  const ctx = { kcal: dayKcal(row, burned), weightKg: row.weightKg }
-  return GOAL_KEYS.flatMap((key) => {
-    const goal = goals[key]
-    const grams = hasLimit(goal) ? goalGrams(goal, key, ctx) : undefined
-    return grams ? [{ key, ...grams }] : []
-  })
-}
+/** An intake, or an item of a meal plan. */
+export type GoalEntry = Pick<IntakeEntry, 'calories' | 'quantity' | 'unitNutrients'>
 
 /** A nutrient's total. Unsaturated fat counts only entries with both fat and saturated fat. */
 export function goalTotal(sums: NutrientSums, key: GoalKey): NutrientTotal {
   return key === 'unsaturatedFat' ? sums.unsaturated : sums.totals[key]
 }
 
-function hasValue(entry: IntakeEntry, key: GoalKey): boolean {
+function hasValue(entry: GoalEntry, key: GoalKey): boolean {
   const n = entry.unitNutrients
   if (!n) return false
   return key === 'unsaturatedFat' ? n.fat !== undefined && n.saturatedFat !== undefined : n[key] !== undefined
 }
 
-const kcalShare = (intakes: IntakeEntry[], covered: (e: IntakeEntry) => boolean): number => {
-  const total = intakes.reduce((sum, e) => sum + e.calories, 0)
-  if (total <= 0) return intakes.some(covered) ? 1 : 0
-  return intakes.reduce((sum, e) => sum + (covered(e) ? e.calories : 0), 0) / total
+const kcalShare = (entries: GoalEntry[], covered: (e: GoalEntry) => boolean): number => {
+  const total = entries.reduce((sum, e) => sum + e.calories, 0)
+  if (total <= 0) return entries.some(covered) ? 1 : 0
+  return entries.reduce((sum, e) => sum + (covered(e) ? e.calories : 0), 0) / total
 }
 
 /** The share of a day's kcal from entries with any nutrient data. */
-export function kcalCoverage(intakes: IntakeEntry[]): number {
-  return kcalShare(intakes, (e) => hasNutrients(e.unitNutrients))
+export function kcalCoverage(entries: GoalEntry[]): number {
+  return kcalShare(entries, (e) => hasNutrients(e.unitNutrients))
 }
 
 /**
  * A day counts for a goal when at least half of its kcal comes from entries with a value for
  * that nutrient. A day with almost no data would pull the averages down.
  */
-export function isCounted(intakes: IntakeEntry[], key: GoalKey): boolean {
-  return intakes.length > 0 && kcalShare(intakes, (e) => hasValue(e, key)) >= 0.5
+export function isCounted(entries: GoalEntry[], key: GoalKey): boolean {
+  return entries.length > 0 && kcalShare(entries, (e) => hasValue(e, key)) >= 0.5
+}
+
+/**
+ * The kcal that a "% of kcal" goal is a share of: the kcal eaten, from entries with a value for
+ * the nutrient. Why: the guidelines are shares of the energy eaten, and food without the value
+ * adds kcal but no grams.
+ */
+export function coveredKcal(entries: GoalEntry[], key: GoalKey): number {
+  return entries.reduce((sum, e) => sum + (hasValue(e, key) ? e.calories : 0), 0)
+}
+
+/** "% of kcal" and "per 1000 kcal" goals follow the kcal eaten. Grams and g/kg do not. */
+export function followsKcal(unit: GoalUnit): boolean {
+  return unit === 'pctKcal' || unit === 'gPer1000Kcal'
+}
+
+/**
+ * The color of a goal on a day that has not ended.
+ * - met: met if you stop eating now.
+ * - behind: not met if you stop eating now, but the planned kcal that are left can still meet it.
+ * - notYet: a goal in grams under its minimum that the planned kcal left can still meet.
+ * - unreachable: the planned kcal left cannot meet it.
+ */
+export type LiveStatus = 'met' | 'behind' | 'notYet' | 'unreachable'
+
+export interface LiveGoal {
+  key: GoalKey
+  amount: number
+  /** The goal in grams if the planned kcal are eaten (the bar). On an ended day, for the kcal eaten. */
+  goal: GramRange
+  /** The goal for the kcal eaten so far, when it is not `goal` (the thin lines on the bar). */
+  soFar?: GramRange
+  /** Absent on an ended day: its bar shows the result. */
+  status?: LiveStatus
+}
+
+/**
+ * The goals of a day on Today and in the Meal planner. The planned kcal are the target plus
+ * burns. A goal that follows kcal is a share of the kcal eaten, as on the Overview, so a day
+ * that is green at midnight is also green the next day. The rest of the planned kcal can be
+ * eaten with none of the nutrient (a maximum) or with the food that has the most of it (a
+ * minimum). Eating more than the plan does not count, because the app must not suggest it.
+ */
+export function liveGoals(row: DailyTarget | undefined, burned: number, entries: GoalEntry[], dayEnded: boolean): LiveGoal[] {
+  const goals = row?.nutrientGoals
+  if (!row || !goals) return []
+  const eaten = entries.reduce((sum, e) => sum + e.calories, 0)
+  const left = dayEnded ? 0 : Math.max(0, row.target + burned - eaten)
+  const sums = sumNutrients(entries)
+  return GOAL_KEYS.flatMap((key): LiveGoal[] => {
+    const goal = goals[key]
+    if (!hasLimit(goal)) return []
+    const byKcal = followsKcal(goal.unit)
+    const covered = coveredKcal(entries, key)
+    if (byKcal && covered + left <= 0) return []
+    const ctx = (kcal: number) => ({ kcal, weightKg: row.weightKg })
+    const soFar = goalGrams(goal, key, ctx(covered))
+    const full = byKcal ? goalGrams(goal, key, ctx(covered + left)) : soFar
+    if (!soFar || !full) return []
+    const amount = goalTotal(sums, key).total
+    if (dayEnded) return [{ key, amount, goal: full }]
+
+    const most = GOALS[key].mostPerKcal
+    const canMeetMax = full.max === undefined || amount <= full.max
+    const canMeetMin =
+      full.min === undefined ||
+      (soFar.min !== undefined && amount >= soFar.min) ||
+      most === undefined ||
+      amount + most * left >= full.min
+    const status: LiveStatus =
+      statusOf(amount, soFar) === 'within'
+        ? 'met'
+        : !canMeetMax || !canMeetMin
+          ? 'unreachable'
+          : byKcal
+            ? 'behind'
+            : 'notYet'
+    return [{ key, amount, goal: full, soFar: byKcal && left > 0 ? soFar : undefined, status }]
+  })
 }
 
 export interface DayGoal {
   amount: number
   grams: GramRange
+  /** The kcal of the entries with a value for the nutrient. */
   kcal: number
 }
 
@@ -73,7 +134,8 @@ export interface DayGoal {
 export function dayGoal(day: DayData, key: GoalKey): DayGoal | undefined {
   const goal = day.row?.nutrientGoals?.[key]
   if (!day.row || !hasLimit(goal) || !isCounted(day.intakes, key)) return undefined
-  const kcal = dayKcal(day.row, day.burned)
+  const kcal = coveredKcal(day.intakes, key)
+  if (followsKcal(goal.unit) && kcal <= 0) return undefined
   const grams = goalGrams(goal, key, { kcal, weightKg: day.row.weightKg })
   if (!grams) return undefined
   return { amount: goalTotal(sumNutrients(day.intakes), key).total, grams, kcal }
@@ -112,7 +174,7 @@ export function habitResult(days: DayData[], key: GoalKey): HabitResult | undefi
   return { days: goals.length, amount, kcal: sum((g) => g.kcal), min, max, status: statusOf(amount, { min, max }) }
 }
 
-/** A sum of grams over the result's days, in a goal's unit. "% of kcal" divides by the sum of the targets. */
+/** A sum of grams over the result's days, in a goal's unit. "% of kcal" divides by the sum of the kcal eaten. */
 export function inUnit(gramsSum: number, result: HabitResult, unit: GoalUnit, key: GoalKey, weightKg?: number) {
   return fromGrams(gramsSum / result.days, unit, key, { kcal: result.kcal / result.days, weightKg })
 }
@@ -140,7 +202,7 @@ export function averageInUnit(days: DayData[], key: GoalKey, unit: GoalUnit, wei
   const counted = days.filter((d) => d.row && isCounted(d.intakes, key))
   if (counted.length === 0) return undefined
   const amount = counted.reduce((s, d) => s + goalTotal(sumNutrients(d.intakes), key).total, 0)
-  const kcal = counted.reduce((s, d) => s + dayKcal(d.row!, d.burned), 0)
+  const kcal = counted.reduce((s, d) => s + coveredKcal(d.intakes, key), 0)
   return fromGrams(amount / counted.length, unit, key, { kcal: kcal / counted.length, weightKg })
 }
 
@@ -148,7 +210,7 @@ export type DayMark = 'met' | 'close' | 'missed' | 'none'
 
 /**
  * A missed day is "close" when it misses by this share of the goal or less. At the same point
- * the bar on Today turns yellow, so the two screens agree.
+ * a past day's bar on Today turns yellow, so the two screens agree.
  */
 export const CLOSE_SHARE = 0.1
 
