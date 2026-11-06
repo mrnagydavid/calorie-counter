@@ -7,6 +7,7 @@ import { applyCustomFoodAction } from '../db/customFoods'
 import { todayString } from '../db/dates'
 import { getTargetForDate } from '../db/dailyTargets'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
+import { displayQuantity } from '../components/FoodForm'
 import { FeatureIntro } from '../components/FeatureIntro'
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner'
 import { NumericInput } from '../components/NumericInput'
@@ -14,7 +15,7 @@ import { PlannerGoals, itemGoalLine } from '../components/PlannerGoals'
 import { useDraftCache } from '../hooks/useDraftCache'
 import { barColor } from '../utils/barColor'
 import { liveGoals } from '../utils/goalProgress'
-import { entryNutrients, sumNutrients } from '../utils/nutrients'
+import { entryNutrients, parseDecimal, sumNutrients } from '../utils/nutrients'
 import styles from './MealPlanner.module.css'
 
 interface MealPlannerDraft {
@@ -34,6 +35,47 @@ interface DraftItem {
   unitNutrients?: Nutrients
   quantity: number
   unit: string
+}
+
+const isPer100 = (unit: string) => unit === '100g' || unit === '100ml'
+
+/** The label after the amount box: "g" for 100g, "ml" for 100ml, else the unit itself. */
+function amountUnit(unit: string): string {
+  if (unit === '100g') return 'g'
+  if (unit === '100ml') return 'ml'
+  return unit
+}
+
+/** The item with a new amount in the box's unit (grams for 100g). An empty box gives 0 kcal. */
+function withAmount(item: DraftItem, amount: number): DraftItem {
+  return {
+    ...item,
+    quantity: isPer100(item.unit) ? amount / 100 : amount,
+    calories: Math.round(isPer100(item.unit) ? item.unitCalories * amount / 100 : item.unitCalories * amount),
+  }
+}
+
+/** Keeps the typed text, so "0," or an empty box stays as typed while the kcal follow it. */
+function AmountInput({ item, onChange }: { item: DraftItem; onChange: (amount: number) => void }) {
+  const [text, setText] = useState(() => String(displayQuantity(item.unit, item.quantity)))
+  return (
+    <span class={styles.amount}>
+      <NumericInput
+        type="text"
+        inputMode="decimal"
+        class={styles.amountInput}
+        value={text}
+        // A tap on the box must not open or close the item
+        onClick={(e) => e.stopPropagation()}
+        onInput={(e) => {
+          const value = (e.target as HTMLInputElement).value
+          setText(value)
+          onChange(parseDecimal(value) ?? 0)
+        }}
+      />
+      <span class={styles.amountUnit}>{amountUnit(item.unit)}</span>
+    </span>
+  )
 }
 
 export function MealPlanner({ date: dateProp }: MealPlannerProps) {
@@ -116,6 +158,10 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
     // The same tick as Add intake, so a planned food can be kept in My foods
     await applyCustomFoodAction(result)
   }, [])
+
+  const setAmount = (id: string, amount: number) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? withAmount(i, amount) : i)))
+  }
 
   const removeItem = (id: string) => {
     setItems(items.filter((i) => i.id !== id))
@@ -211,13 +257,23 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
           <div class={styles.sectionTitle}>Items</div>
           <div class={styles.itemList}>
             {items.map((item) => (
-              <div key={item.id}>
+              <div key={item.id} class={styles.itemBlock}>
                 <div
                   class={styles.item}
                   onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                 >
-                  <span class={styles.itemName}>{item.name}</span>
-                  <span class={styles.itemCal}>{item.calories} kcal</span>
+                  {item.unit === 'total' ? (
+                    <div class={styles.itemLine}>
+                      <span class={styles.itemName}>{item.name}</span>
+                      <span class={styles.itemCal}>{item.calories} kcal</span>
+                    </div>
+                  ) : (<>
+                    <span class={styles.itemName}>{item.name}</span>
+                    <div class={styles.itemLine}>
+                      <AmountInput item={item} onChange={(amount) => setAmount(item.id, amount)} />
+                      <span class={styles.itemCal}>{item.calories} kcal</span>
+                    </div>
+                  </>)}
                 </div>
                 {expandedId === item.id && (
                   <div class={styles.itemActions}>
