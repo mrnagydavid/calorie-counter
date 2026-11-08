@@ -62,6 +62,8 @@ interface FoodFormProps {
   showSaveAndAddNew?: boolean
   onSubmit: (result: FoodFormResult) => void
   onSaveAndAddNew?: (result: FoodFormResult) => void
+  /** Last food of a multi-add: the kcal of the other foods, for a line with the total of all of them. */
+  combinedTotal?: { count: number; otherCalories: number }
   scrollAnchorRef?: { current: HTMLDivElement | null }
 }
 
@@ -131,6 +133,7 @@ export function FoodForm({
   showSaveAndAddNew = false,
   onSubmit,
   onSaveAndAddNew,
+  combinedTotal,
   scrollAnchorRef,
 }: FoodFormProps) {
   // A unit with no radio (an OFF serving, a custom unit) shows as the custom one.
@@ -339,7 +342,16 @@ export function FoodForm({
         </div>
       )}
 
-      {!savedFood && <div class={styles.total}>Total: {total} kcal</div>}
+      {!savedFood && (
+        <div class={styles.total}>
+          Total: {total} kcal
+          {combinedTotal && (
+            <div class={styles.combinedTotal}>
+              All {combinedTotal.count} foods: {combinedTotal.otherCalories + total} kcal
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Nutrition */}
       {!hideFoodDetails && (

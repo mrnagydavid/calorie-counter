@@ -112,6 +112,13 @@
   color: var(--color-text);
 }
 
+.combinedTotal {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
 /* Name input */
 .textInput {
   width: 100%;
