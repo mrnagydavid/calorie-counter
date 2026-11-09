@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'preact/hooks'
+import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect } from 'preact/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type Nutrients } from '../db/index'
 import { hasNutrients } from '../utils/nutrients'
@@ -149,6 +149,8 @@ export function FoodPicker({
   const pressTimer = useRef<number | undefined>(undefined)
   const pressStart = useRef<{ x: number; y: number } | null>(null)
   const pressFired = useRef(false)
+  // The pressed row and its screen position when the selection started
+  const pressAnchor = useRef<{ row: HTMLElement; top: number } | null>(null)
   // A scanned barcode is for one food, so that flow has no multi-add.
   const canMultiSelect = !barcodeFromScan
 
@@ -340,10 +342,12 @@ export function FoodPicker({
     pressFired.current = false
     if (!canMultiSelect || selecting) return
     pressStart.current = { x: e.clientX, y: e.clientY }
+    const row = e.currentTarget as HTMLElement
     window.clearTimeout(pressTimer.current)
     pressTimer.current = window.setTimeout(() => {
       pressFired.current = true
       pressStart.current = null
+      pressAnchor.current = { row, top: row.getBoundingClientRect().top }
       navigator.vibrate?.(10)
       setSelecting(true)
       setSelected([name])
@@ -364,6 +368,17 @@ export function FoodPicker({
     if (selecting) toggleSelected(item.name)
     else void handleRecentTap(item)
   }, [selecting, toggleSelected, handleRecentTap])
+
+  // The selection hides the form and opens the list to full height, which moves the rows.
+  // The pressed row goes back under the finger, so the user sees what they ticked.
+  useLayoutEffect(() => {
+    const anchor = pressAnchor.current
+    pressAnchor.current = null
+    const body = bodyRef.current
+    if (!selecting || !anchor || !body) return
+    body.scrollTop += anchor.row.getBoundingClientRect().top - anchor.top
+    anchor.row.scrollIntoView({ block: 'nearest' })
+  }, [selecting])
 
   // ---- The queue: one form per ticked food ----
 
