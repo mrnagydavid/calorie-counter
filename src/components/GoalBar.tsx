@@ -1,4 +1,3 @@
-import type { GoalScale } from '../hooks/useGoalScale'
 import { GREEN, GREY, overColor, RED, underColor, YELLOW } from '../utils/barColor'
 import type { LiveGoal, LiveStatus } from '../utils/goalProgress'
 import type { GoalKind, GramRange } from '../utils/goals'
@@ -9,7 +8,7 @@ export interface GoalBarData {
   amount: number
   /** Grams that a plan adds (Meal planner). They show as a lighter piece after the amount. */
   planned?: number
-  /** The goal in grams that the bar shows (`shownGoal`). On an ended day, for the kcal eaten. */
+  /** The goal in grams for the planned kcal. On an ended day, for the kcal eaten. */
   min?: number
   max?: number
   /** For the note under the bars. The colors are the same for both kinds. */
@@ -45,37 +44,30 @@ function resultColor(amount: number, min?: number, max?: number): string {
 
 const g = (n: number) => String(n < 10 ? Math.round(n * 10) / 10 : Math.round(n))
 
-const range = (min?: number, max?: number) => {
+const range = ({ min, max }: GramRange) => {
   if (min !== undefined && max !== undefined) return `${g(min)}–${g(max)} g`
   return min !== undefined ? `at least ${g(min)} g` : `at most ${g(max!)} g`
 }
 
 /**
  * The label for screen readers: "Goal: 45–60 g", "Goal: at least 25 g", "Goal: at most 16 g",
- * or "Goal for the kcal eaten so far: at most 9.3 g".
+ * or "Goal for the planned kcal: at most 16 g. For the kcal eaten so far: at most 9.3 g."
  */
-export function goalLabel(min?: number, max?: number, eaten = false): string {
-  return `Goal${eaten ? ' for the kcal eaten so far' : ''}: ${range(min, max)}`
-}
-
-/** True when the goals for the kcal eaten so far and for the planned kcal differ: the bars get a switch. */
-export const hasScales = (goals: LiveGoal[]) => goals.some((goal) => goal.soFar)
-
-/** The goal that a bar shows. A goal in grams is the same for both scales. */
-export function shownGoal(goal: LiveGoal, scale: GoalScale): GramRange {
-  return scale === 'eaten' && goal.soFar ? goal.soFar : goal.goal
+export function goalLabel(goal: GramRange, soFar?: GramRange): string {
+  return soFar
+    ? `Goal for the planned kcal: ${range(goal)}. For the kcal eaten so far: ${range(soFar)}.`
+    : `Goal: ${range(goal)}`
 }
 
 /** The bar data of a goal from `liveGoals`. */
-export function liveBar(goal: LiveGoal, kind: GoalKind, scale: GoalScale, planned?: number): GoalBarData {
-  const { min, max } = shownGoal(goal, scale)
+export function liveBar(goal: LiveGoal, kind: GoalKind, planned?: number): GoalBarData {
   return {
     amount: goal.amount - (planned ?? 0),
     planned,
-    min,
-    max,
+    min: goal.goal.min,
+    max: goal.goal.max,
     kind,
-    label: goalLabel(min, max, scale === 'eaten' && goal.soFar !== undefined),
+    label: goalLabel(goal.goal, goal.soFar),
     status: goal.status,
   }
 }
@@ -114,23 +106,27 @@ export function GoalBar(props: GoalBarData) {
 }
 
 /**
- * The notes under goal bars. `scaleNote`: with a switch, the words that say which kcal the goals
- * are for (`scaleNote` of GoalScaleSwitch). Without it, the goals are for the day.
- * `plan`: the Meal planner, where the amounts include the plan.
+ * The notes under goal bars. `plannedKcal`: the target with burns, for the note that says which
+ * kcal the bars are for. `plan`: the Meal planner, where the amounts include the plan.
  * The markers note shows on every day. The others only on a day that has not ended.
  */
-export function goalNotes(goals: LiveGoal[], scaleNote?: string, plan = false): string[] {
+export function goalNotes(goals: LiveGoal[], plannedKcal: number, plan = false): string[] {
   const notes: string[] = []
+  // While planned kcal are left, the goal of a "% of kcal" bar is not the goal for the kcal eaten
+  // so far, so the note says which kcal the bars are for
+  const hasSoFar = goals.some((goal) => goal.soFar)
   // The same test as the bar: a limit of 0 has no marker
   const hasMin = goals.some(({ goal }) => (goal.min ?? 0) > 0)
   const hasMax = goals.some(({ goal }) => (goal.max ?? 0) > 0)
-  const day = scaleNote ? '' : ' for the day'
+  const day = hasSoFar ? '' : ' for the day'
+  const scale = hasSoFar ? `The bars show the goal for your planned ${plannedKcal} kcal.` : undefined
   const markers = hasMin
     ? `The green triangle is the minimum${day}.${hasMax ? ' If a goal has a maximum, the end of the bar is the maximum.' : ''}`
     : hasMax
       ? `The end of a bar is the maximum${day}.`
       : undefined
-  if (markers) notes.push(scaleNote ? `${scaleNote} ${markers}` : markers)
+  const first = [scale, markers].filter(Boolean).join(' ')
+  if (first) notes.push(first)
   if (goals.some((goal) => goal.status === 'behind')) {
     notes.push(
       `Yellow: you miss the goal if you stop eating ${plan ? 'after this plan' : 'now'}. You can still meet it without going over your planned calories.`,

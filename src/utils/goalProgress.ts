@@ -72,7 +72,7 @@ export interface LiveGoal {
   amount: number
   /** The goal in grams if the planned kcal are eaten (the bar). On an ended day, for the kcal eaten. */
   goal: GramRange
-  /** The goal for the kcal eaten so far, when it is not `goal` (the thin lines on the bar). */
+  /** The goal for the kcal eaten so far, when it is not `goal`. It sets the color and the screen reader label. */
   soFar?: GramRange
   /** Absent on an ended day: its bar shows the result. */
   status?: LiveStatus

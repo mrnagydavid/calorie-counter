@@ -1,13 +1,11 @@
 import { Fragment } from 'preact'
 import type { GoalKey } from '../db/index'
-import { useGoalScale } from '../hooks/useGoalScale'
 import type { GramRange } from '../utils/goals'
 import { goalTotal, type LiveGoal } from '../utils/goalProgress'
 import { GOALS, SODIUM_MG_PER_SALT_G } from '../utils/goals'
 import { formatNutrient, type NutrientSums } from '../utils/nutrients'
-import { GoalBar, goalNotes, hasScales, liveBar, shownGoal } from './GoalBar'
+import { GoalBar, goalNotes, liveBar } from './GoalBar'
 import { GoalNotes } from './GoalNotes'
-import { GoalScaleSwitch, scaleNote } from './GoalScaleSwitch'
 import styles from './PlannerGoals.module.css'
 
 type SaltUnit = 'salt' | 'sodium'
@@ -33,8 +31,6 @@ interface PlannerGoalsProps {
   /** The day's goals with the plan counted as eaten (`liveGoals`). */
   goals: LiveGoal[]
   planned: NutrientSums
-  /** The kcal eaten, with the plan. */
-  eatenKcal: number
   /** The day's target with burns. */
   plannedKcal: number
   saltUnit?: SaltUnit
@@ -42,33 +38,24 @@ interface PlannerGoalsProps {
 
 /**
  * A row for each goal: the day's amount plus the plan on a bar, and what is left after the plan.
- * The bar and the text use the goal that the switch selects, as on Today.
+ * The text uses the goal for the planned kcal, the same as the full bar.
  */
-export function PlannerGoals({ goals, planned, eatenKcal, plannedKcal, saltUnit }: PlannerGoalsProps) {
-  const [chosenScale, setScale] = useGoalScale()
-  const switchable = hasScales(goals)
-  const scale = switchable ? chosenScale : 'planned'
-
+export function PlannerGoals({ goals, planned, plannedKcal, saltUnit }: PlannerGoalsProps) {
   return (
     <>
-      {switchable && (
-        <GoalScaleSwitch scale={scale} onChange={setScale} eatenKcal={eatenKcal} plannedKcal={plannedKcal} plan />
-      )}
       <div class={styles.grid}>
         {goals.map((goal) => {
           const { key } = goal
           return (
             <Fragment key={key}>
               <span class={styles.label}>{name(key, saltUnit)}</span>
-              <GoalBar {...liveBar(goal, GOALS[key].kind, scale, goalTotal(planned, key).total)} />
-              <span class={styles.value}>{leftText(goal.amount, key, shownGoal(goal, scale), saltUnit)}</span>
+              <GoalBar {...liveBar(goal, GOALS[key].kind, goalTotal(planned, key).total)} />
+              <span class={styles.value}>{leftText(goal.amount, key, goal.goal, saltUnit)}</span>
             </Fragment>
           )
         })}
       </div>
-      <GoalNotes
-        notes={goalNotes(goals, switchable ? scaleNote(scale, eatenKcal, plannedKcal, true) : undefined, true)}
-      />
+      <GoalNotes notes={goalNotes(goals, plannedKcal, true)} />
     </>
   )
 }

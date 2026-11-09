@@ -3,10 +3,8 @@ import type { DailyTarget, GoalKey, IntakeEntry } from '../db/index'
 import { kcalCoverage, liveGoals, type LiveGoal } from '../utils/goalProgress'
 import { GOALS } from '../utils/goals'
 import { NUTRIENT_KEYS, formatNutrient, knownTotals, sumNutrients, type NutrientKey } from '../utils/nutrients'
-import { useGoalScale, type GoalScale } from '../hooks/useGoalScale'
-import { goalNotes, hasScales, liveBar, type GoalBarData } from './GoalBar'
+import { goalNotes, liveBar, type GoalBarData } from './GoalBar'
 import { GoalNotes } from './GoalNotes'
-import { GoalScaleSwitch, scaleNote } from './GoalScaleSwitch'
 import { NutritionRows, type RowKey } from './NutritionRows'
 import styles from './NutritionSummary.module.css'
 
@@ -38,9 +36,9 @@ function readOpen(): boolean {
 }
 
 /** A bar for each goal in the day's copy. */
-function goalBars(goals: LiveGoal[], scale: GoalScale) {
+function goalBars(goals: LiveGoal[]) {
   const bars: Partial<Record<RowKey, GoalBarData>> = {}
-  for (const goal of goals) bars[ROW_OF_GOAL[goal.key]] = liveBar(goal, GOALS[goal.key].kind, scale)
+  for (const goal of goals) bars[ROW_OF_GOAL[goal.key]] = liveBar(goal, GOALS[goal.key].kind)
   return bars
 }
 
@@ -55,7 +53,6 @@ interface NutritionSummaryProps {
 
 export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: NutritionSummaryProps) {
   const [open, setOpen] = useState(readOpen)
-  const [chosenScale, setScale] = useGoalScale()
 
   if (intakes.length === 0) return null
 
@@ -63,15 +60,12 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: Nu
   const hasData = NUTRIENT_KEYS.some((key) => sums.totals[key].count > 0)
   // Today cannot go to a future day, so every other day has ended
   const goals = liveGoals(row, burned, intakes, !isToday)
-  const switchable = hasScales(goals)
-  const scale = switchable ? chosenScale : 'planned'
-  const eatenKcal = Math.round(intakes.reduce((sum, e) => sum + e.calories, 0))
   const plannedKcal = Math.round((row?.target ?? 0) + burned)
-  const bars = goalBars(goals, scale)
+  const bars = goalBars(goals)
   const hasBars = Object.keys(bars).length > 0
   const hasHabitGoal = Object.values(bars).some((b) => b.kind === 'habit')
   const coverage = kcalCoverage(intakes)
-  const notes = [...goalNotes(goals, switchable ? scaleNote(scale, eatenKcal, plannedKcal) : undefined)]
+  const notes = goalNotes(goals, plannedKcal)
   if (hasHabitGoal) {
     notes.push(
       'Some of these goals are judged on your average over weeks, not on one day. You can follow them best on the Overview.',
@@ -111,9 +105,6 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: Nu
         <div class={styles.content}>
           {hasData ? (
             <>
-              {switchable && (
-                <GoalScaleSwitch scale={scale} onChange={setScale} eatenKcal={eatenKcal} plannedKcal={plannedKcal} />
-              )}
               <NutritionRows {...knownTotals(sums)} goals={bars} saltUnit={saltUnit} />
               <GoalNotes notes={notes} warning={warning} />
             </>

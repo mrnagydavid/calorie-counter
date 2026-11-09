@@ -246,7 +246,6 @@ export function MealPlanner({ date: dateProp }: MealPlannerProps) {
           <PlannerGoals
             goals={goals}
             planned={sumNutrients(items)}
-            eatenKcal={Math.round((intakes ?? []).reduce((sum, e) => sum + e.calories, 0) + draftTotal)}
             plannedKcal={Math.round((storedTarget?.target ?? 0) + burned)}
             saltUnit={saltUnit}
           />
