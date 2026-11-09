@@ -48,15 +48,3 @@
   stroke-width: 1.5;
   stroke-linejoin: round;
 }
-
-/* The goal for the kcal eaten so far. The white edge keeps it visible on every fill. */
-.soFarMark {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 10px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: #374151;
-  box-shadow: 0 0 0 1px white;
-}
