@@ -8,7 +8,7 @@ import { ensureTodayTarget, getTargetForDate, getTargetsForRange } from '../db/d
 import { DateNav } from '../components/DateNav'
 import { CalorieBudgetBar } from '../components/CalorieBudgetBar'
 import { EntryList } from '../components/EntryList'
-import { NutritionSummary } from '../components/NutritionSummary'
+import { NutritionSummary, useNutritionOpen } from '../components/NutritionSummary'
 import { Fab } from '../components/Fab'
 import { BarcodeScanner } from '../components/BarcodeScanner'
 import { InstallBanner } from '../components/InstallBanner'
@@ -54,6 +54,7 @@ export function Dashboard() {
     return () => window.removeEventListener('dashboard:reset-today', onReset)
   }, [])
   const [scanning, setScanning] = useState(false)
+  const [nutritionOpen, toggleNutrition] = useNutritionOpen()
 
   const settings = useLiveQuery(() => db.settings.get('user-settings'))
 
@@ -199,8 +200,16 @@ export function Dashboard() {
         burned={burned}
         isToday={date === today}
         saltUnit={settings.saltUnit}
+        open={nutritionOpen}
+        onToggle={toggleNutrition}
       />
-      <EntryList intakes={intakes} burns={burns} weightEntry={weightEntry} />
+      <EntryList
+        intakes={intakes}
+        burns={burns}
+        weightEntry={weightEntry}
+        nutritionOpen={nutritionOpen}
+        saltUnit={settings.saltUnit}
+      />
       <Fab date={date} remaining={remaining} onScanBarcode={() => setScanning(true)} />
       {scanning && (
         <BarcodeScanner date={date} onClose={() => setScanning(false)} />

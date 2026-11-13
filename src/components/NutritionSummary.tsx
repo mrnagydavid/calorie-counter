@@ -35,6 +35,24 @@ function readOpen(): boolean {
   }
 }
 
+/**
+ * Whether the Nutrition section is open, remembered between visits. Today owns it, because a
+ * tapped entry also uses it: open shows that entry's nutrients as a table, closed as one line.
+ */
+export function useNutritionOpen(): [boolean, () => void] {
+  const [open, setOpen] = useState(readOpen)
+  const toggle = () => {
+    const next = !open
+    setOpen(next)
+    try {
+      localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+    } catch {
+      // The state is a convenience. The section still works without it.
+    }
+  }
+  return [open, toggle]
+}
+
 /** A bar for each goal in the day's copy. */
 function goalBars(goals: LiveGoal[]) {
   const bars: Partial<Record<RowKey, GoalBarData>> = {}
@@ -49,11 +67,11 @@ interface NutritionSummaryProps {
   burned: number
   isToday: boolean
   saltUnit?: 'salt' | 'sodium'
+  open: boolean
+  onToggle: () => void
 }
 
-export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: NutritionSummaryProps) {
-  const [open, setOpen] = useState(readOpen)
-
+export function NutritionSummary({ intakes, row, burned, isToday, saltUnit, open, onToggle }: NutritionSummaryProps) {
   if (intakes.length === 0) return null
 
   const sums = sumNutrients(intakes)
@@ -76,16 +94,6 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: Nu
       ? `Nutrient data exists for only ${Math.floor(coverage * 100)}% of ${isToday ? 'today’s' : 'this day’s'} kcal, which means that the real amounts are probably higher than shown.`
       : undefined
 
-  const toggle = () => {
-    const next = !open
-    setOpen(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
-    } catch {
-      // The state is a convenience. The section still works without it.
-    }
-  }
-
   const closedLine = hasData
     ? `${CLOSED_ROWS.map(({ key, label }) => {
         const { total, count } = sums.totals[key]
@@ -95,7 +103,7 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit }: Nu
 
   return (
     <div>
-      <button class={styles.header} onClick={toggle} aria-expanded={open}>
+      <button class={styles.header} onClick={onToggle} aria-expanded={open}>
         <span class={styles.title}>Nutrition</span>
         {!open && <span class={styles.closedLine}>{closedLine}</span>}
         <span class={styles.chevron}>{open ? '▾' : '▸'}</span>

@@ -20,6 +20,11 @@ const ROWS: Row[] = [
   { key: 'salt', label: 'Salt' },
 ]
 
+/** "7.5 g", or "80 mg" for salt shown as sodium. One decimal everywhere, so a list never mixes integers and decimals. */
+export function amountText(grams: number, sodium: boolean): string {
+  return sodium ? `${Math.round(grams * SODIUM_MG_PER_SALT_G)} mg` : `${grams.toFixed(1)} g`
+}
+
 interface NutritionRowsProps extends KnownTotals {
   /** A bar for each row with a goal (Today). */
   goals?: Partial<Record<RowKey, GoalBarData>>
@@ -35,9 +40,7 @@ export function NutritionRows({ nutrients, unsaturated, goals, saltUnit }: Nutri
     // The derived row shows only when some item has both fat and saturated fat, or has a goal.
     if (key === 'unsaturated' && value === undefined && !goal) return []
     const sodium = key === 'salt' && saltUnit === 'sodium'
-    let text = '–'
-    // One decimal on every row, so the list never mixes integers and decimals
-    if (value !== undefined) text = sodium ? `${Math.round(value * SODIUM_MG_PER_SALT_G)} mg` : `${value.toFixed(1)} g`
+    const text = value === undefined ? '–' : amountText(value, sodium)
     return [{ key, label: sodium ? 'Sodium' : label, sub, text, goal }]
   })
 

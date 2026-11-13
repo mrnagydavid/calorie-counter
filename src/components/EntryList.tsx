@@ -6,12 +6,16 @@ import { refreshTodayWeight } from '../db/dailyTargets'
 import { calcNetKcal, activityName, toActivity } from '../services/activityEnergy'
 import { NumericInput } from './NumericInput'
 import { EntryEditor } from './EntryEditor'
+import { EntryNutrition } from './EntryNutrition'
 import styles from './EntryList.module.css'
 
 interface EntryListProps {
   intakes: IntakeEntry[]
   burns: BurnEntry[]
   weightEntry?: WeightEntry | null
+  /** Whether Today's Nutrition section is open: a tapped food then shows a table, not a line. */
+  nutritionOpen: boolean
+  saltUnit?: 'salt' | 'sodium'
 }
 
 type MergedEntry =
@@ -25,7 +29,7 @@ function formatTime(iso: string): string {
 
 const WEIGHT_ID = '__weight__'
 
-export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
+export function EntryList({ intakes, burns, weightEntry, nutritionOpen, saltUnit }: EntryListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -220,6 +224,10 @@ export function EntryList({ intakes, burns, weightEntry }: EntryListProps) {
                   {entry.type === 'burn' ? '+' : ''}{entry.data.calories} kcal
                 </div>
               </div>
+
+              {isExpanded && !isEditing && entry.type === 'intake' && (
+                <EntryNutrition entry={entry.data} table={nutritionOpen} saltUnit={saltUnit} />
+              )}
 
               {isExpanded && !isEditing && (
                 <div class={styles.actions}>
