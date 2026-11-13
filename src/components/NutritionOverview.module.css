@@ -66,16 +66,6 @@
   flex-direction: column;
 }
 
-/* A "close" line under one value must not push the other value down */
-.statsDaily {
-  align-items: flex-start;
-}
-
-.statClose {
-  font-size: 12px;
-  color: #047857;
-}
-
 .statLabel {
   font-size: 12px;
   color: var(--color-text-secondary);
@@ -134,6 +124,17 @@
 .markNone {
   background: white;
   border: 1px solid #d1d5db;
+}
+
+/* A missed day points to the side it missed on. The triangle fills the same 8 px box as a square. */
+.markUp {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.markDown {
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 .legend {

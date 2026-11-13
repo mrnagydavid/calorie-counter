@@ -228,6 +228,14 @@ export function dayMark(day: DayData, key: GoalKey): DayMark {
   return isClose(g.amount, g.grams) ? 'close' : 'missed'
 }
 
+/** The side on which a counted day missed its goal. Undefined when it met the goal or does not count. */
+export function missSide(day: DayData, key: GoalKey): 'above' | 'below' | undefined {
+  const g = dayGoal(day, key)
+  if (!g) return undefined
+  const status = statusOf(g.amount, g.grams)
+  return status === 'within' ? undefined : status
+}
+
 export interface DailyResult {
   met: number
   close: number

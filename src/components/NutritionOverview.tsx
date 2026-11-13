@@ -13,8 +13,8 @@ import {
   formatInUnit,
   habitResult,
   inUnit,
+  missSide,
   weeksBefore,
-  type DailyResult,
   type DayData,
   type DayMark,
 } from '../utils/goalProgress'
@@ -58,14 +58,12 @@ export function NutritionOverview() {
             </svg>
           </span>
           <span class={styles.cardGoal}>{capitalize(describeGoal(goals[key]!, key, opts))}</span>
-          {GOALS[key].kind === 'habit' ? (
-            <HabitCard goalKey={key} goal={goals[key]!} last7={last7} last28={last28} weightKg={weight.weightKg} saltUnit={settings.saltUnit} />
-          ) : (
-            <DailyCard goalKey={key} last7={last7} last28={last28} />
-          )}
+          <AverageStats goalKey={key} goal={goals[key]!} last7={last7} last28={last28} weightKg={weight.weightKg} saltUnit={settings.saltUnit} />
+          {GOALS[key].kind === 'daily' && <DayStrip goalKey={key} days={last28} />}
         </button>
       ))}
       {hasDaily && <Legend />}
+      {hasDaily && <p class={styles.rule}>▲ above the goal, ▼ below the goal.</p>}
       <p class={styles.rule}>{hasDaily ? `${COUNT_RULE} ${CLOSE_RULE}` : COUNT_RULE}</p>
 
       {detail && goals[detail] && (
@@ -84,7 +82,7 @@ export function NutritionOverview() {
   )
 }
 
-interface HabitCardProps {
+interface AverageStatsProps {
   goalKey: GoalKey
   goal: NutrientGoal
   last7: DayData[]
@@ -93,7 +91,11 @@ interface HabitCardProps {
   saltUnit?: 'salt' | 'sodium'
 }
 
-function HabitCard({ goalKey, goal, last7, last28, weightKg, saltUnit }: HabitCardProps) {
+/**
+ * The 7-day and 28-day averages, and the 28-day result. Every card shows them, daily goals too,
+ * so all cards give the same information at first glance.
+ */
+function AverageStats({ goalKey, goal, last7, last28, weightKg, saltUnit }: AverageStatsProps) {
   // An average needs no goal: before any day had the goal, the card still shows the amount.
   const value = (days: DayData[]) => {
     const r = habitResult(days, goalKey)
@@ -120,27 +122,29 @@ function HabitCard({ goalKey, goal, last7, last28, weightKg, saltUnit }: HabitCa
   )
 }
 
-function DailyCard({ goalKey, last7, last28 }: { goalKey: GoalKey; last7: DayData[]; last28: DayData[] }) {
-  const d7 = dailyResult(last7, goalKey)
-  const d28 = dailyResult(last28, goalKey)
-  const stat = (label: string, r: DailyResult) => (
-    <span class={styles.stat}>
-      <span class={styles.statLabel}>{label}</span>
-      <span class={styles.statValue}>{r.counted > 0 ? `${r.met} of ${r.counted}` : '–'}</span>
-      {r.close > 0 && <span class={styles.statClose}>+ {r.close} close</span>}
-    </span>
-  )
-  const off = d28.counted - d28.met - d28.close
+type Side = 'above' | 'below'
+
+/**
+ * A daily goal's last 28 days, because an average hides missed days. A missed day is a triangle
+ * that points to the side it missed on. The color tells how far: close or off.
+ */
+function DayStrip({ goalKey, days }: { goalKey: GoalKey; days: DayData[] }) {
+  const { marks } = dailyResult(days, goalKey)
+  const sides = days.map((d) => missSide(d, goalKey))
+  const count = (mark: DayMark, side?: Side) =>
+    marks.filter((m, i) => m === mark && (side === undefined || sides[i] === side)).length
+  const parts: [number, string][] = [
+    [count('met'), 'met'],
+    [count('close', 'above'), 'close above the goal'],
+    [count('close', 'below'), 'close below the goal'],
+    [count('missed', 'above'), 'off above the goal'],
+    [count('missed', 'below'), 'off below the goal'],
+  ]
+  const label = `Last 28 days: ${parts.filter(([n]) => n > 0).map(([n, text]) => `${n} ${text}`).join(', ') || 'no day counted'}`
   return (
-    <>
-      <span class={`${styles.stats} ${styles.statsDaily}`}>
-        {stat('7 days', d7)}
-        {stat('28 days', d28)}
-      </span>
-      <span class={styles.strip} role="img" aria-label={`Last 28 days: ${d28.met} met, ${d28.close} close, ${off} off`}>
-        {d28.marks.map((m, i) => <span key={i} class={`${styles.mark} ${MARK_CLASS[m]}`} />)}
-      </span>
-    </>
+    <span class={styles.strip} role="img" aria-label={label}>
+      {marks.map((m, i) => <span key={i} class={markClass(m, sides[i])} />)}
+    </span>
   )
 }
 
@@ -151,13 +155,26 @@ const MARK_CLASS: Record<DayMark, string> = {
   none: styles.markNone,
 }
 
+const SIDE_CLASS: Record<Side, string> = { above: styles.markUp, below: styles.markDown }
+
+const markClass = (mark: DayMark, side?: Side) =>
+  `${styles.mark} ${MARK_CLASS[mark]}${side ? ` ${SIDE_CLASS[side]}` : ''}`
+
 function Legend() {
   return (
     <div class={styles.legend}>
-      <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markMet}`} />Met</span>
-      <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markClose}`} />Close</span>
-      <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markMissed}`} />Off</span>
-      <span class={styles.legendItem}><span class={`${styles.mark} ${styles.markNone}`} />Not counted</span>
+      <span class={styles.legendItem}><span class={markClass('met')} />Met</span>
+      <span class={styles.legendItem}>
+        <span class={markClass('close', 'above')} />
+        <span class={markClass('close', 'below')} />
+        Close
+      </span>
+      <span class={styles.legendItem}>
+        <span class={markClass('missed', 'above')} />
+        <span class={markClass('missed', 'below')} />
+        Off
+      </span>
+      <span class={styles.legendItem}><span class={markClass('none')} />Not counted</span>
     </div>
   )
 }
