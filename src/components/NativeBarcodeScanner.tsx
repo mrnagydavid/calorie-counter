@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { SCAN_FORMATS } from '../services/barcodeDetector'
+import { openScanCamera } from '../services/scanCamera'
 import { createReadVote, readRetailBarcode } from '../utils/barcode'
 import type { FrameRead, ScanDebugSink } from './scanDebug'
 import styles from './BarcodeScanner.module.css'
@@ -30,7 +31,8 @@ export interface LiveScannerProps {
 
 /**
  * Live scanner backed by the platform-native BarcodeDetector. Owns its own camera via
- * getUserMedia + a <video> element, with continuous autofocus, higher resolution, and a
+ * getUserMedia + a <video> element, with the back camera that has autofocus (`openScanCamera`),
+ * continuous autofocus, higher resolution, and a
  * torch toggle where supported. Used wherever `supportsNativeBarcodeDetector()` is true.
  */
 export function NativeBarcodeScanner({ onDetected, onError, debug }: LiveScannerProps) {
@@ -175,16 +177,7 @@ export function NativeBarcodeScanner({ onDetected, onError, debug }: LiveScanner
 
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        // `ideal` (not `exact`) so a front-only/low-res device still gets a camera
-        // instead of an OverconstrainedError. Higher resolution sharpens small barcodes.
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      })
+      stream = await openScanCamera()
     } catch (err) {
       if (myEpoch !== epochRef.current) return
       console.error('Camera start failed:', err)
