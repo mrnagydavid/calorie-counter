@@ -75,6 +75,8 @@ export function readRetailBarcode(rawValue: string, format: string): string | nu
 export interface ReadVote {
   /** Records one frame (null: no code in it). Returns the code once it has enough votes. */
   add(code: string | null): string | null
+  /** How many frames in the window read this code. */
+  count(code: string): number
   clear(): void
 }
 
@@ -84,13 +86,15 @@ export interface ReadVote {
  */
 export function createReadVote(window: number, needed: number): ReadVote {
   let recent: (string | null)[] = []
+  const count = (code: string) => recent.filter((c) => c === code).length
   return {
     add(code) {
       recent.push(code)
       if (recent.length > window) recent.shift()
       if (code === null) return null
-      return recent.filter((c) => c === code).length >= needed ? code : null
+      return count(code) >= needed ? code : null
     },
+    count,
     clear() {
       recent = []
     },

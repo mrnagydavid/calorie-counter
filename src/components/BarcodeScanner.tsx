@@ -8,6 +8,8 @@ import { supportsNativeBarcodeDetector } from '../services/barcodeDetector'
 import { isValidBarcode, normalizeBarcode } from '../utils/barcode'
 import { FoodSpinner } from './FoodSpinner'
 import { NativeBarcodeScanner } from './NativeBarcodeScanner'
+import { ScanDebugPanel } from './ScanDebugPanel'
+import { useScanDebugLog } from './scanDebug'
 import styles from './BarcodeScanner.module.css'
 import { NumericInput } from './NumericInput'
 
@@ -43,6 +45,13 @@ interface BarcodeScannerProps {
   onAddManually?: (barcode: string, presetSaveAsCustom: boolean) => void
 }
 
+// Scanner diagnostics (temporary). Remembered on this device only.
+const DEBUG_KEY = 'scanDebug'
+
+function readDebugFlag(): boolean {
+  try { return localStorage.getItem(DEBUG_KEY) === '1' } catch { return false }
+}
+
 type State =
   | { step: 'scanning'; loading: boolean }
   | { step: 'found'; product: OFFProduct; barcode: string }
@@ -73,6 +82,15 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
   // null until the async capability probe resolves; true = native BarcodeDetector, false = html5-qrcode.
   const [useNative, setUseNative] = useState<boolean | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const [debugOn, setDebugOn] = useState(readDebugFlag)
+  const debugLog = useScanDebugLog()
+
+  const toggleDebug = useCallback(() => {
+    setDebugOn((on) => {
+      try { localStorage.setItem(DEBUG_KEY, on ? '0' : '1') } catch { /* ignore */ }
+      return !on
+    })
+  }, [])
 
   // Probe once which live scanner to use (native where it can decode retail barcodes, else
   // html5-qrcode on iOS). Result is cached in the service, so this is cheap on re-mount.
@@ -312,6 +330,15 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
           </svg>
         </button>
         <h1 class={styles.headerTitle}>Scan Barcode</h1>
+        <button
+          type="button"
+          class={`${styles.debugButton} ${debugOn ? styles.debugOn : ''}`}
+          aria-label="Scanner diagnostics"
+          aria-pressed={debugOn}
+          onClick={toggleDebug}
+        >
+          🐞
+        </button>
       </div>
 
       <div class={styles.body}>
@@ -330,12 +357,17 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
                 {useNative === null ? (
                   <div class={styles.cameraWrapper} />
                 ) : useNative ? (
-                  <NativeBarcodeScanner onDetected={handleBarcode} onError={handleScanError} />
+                  <NativeBarcodeScanner
+                    onDetected={handleBarcode}
+                    onError={handleScanError}
+                    debug={debugOn ? debugLog.sink : undefined}
+                  />
                 ) : (
                   <Suspense fallback={<div class={styles.cameraWrapper} />}>
                     <Html5QrcodeScanner onDetected={handleBarcode} onError={handleScanError} />
                   </Suspense>
                 )}
+                {debugOn && useNative !== null && <ScanDebugPanel log={debugLog} native={useNative} />}
                 <div class={styles.hint}>Point camera at a barcode</div>
                 <div class={styles.orDivider}>or enter the number</div>
                 <form class={styles.manualRow} onSubmit={submitManualBarcode}>

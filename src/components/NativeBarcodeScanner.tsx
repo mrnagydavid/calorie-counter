@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { SCAN_FORMATS } from '../services/barcodeDetector'
 import { createReadVote, readRetailBarcode } from '../utils/barcode'
+import type { FrameRead, ScanDebugSink } from './scanDebug'
 import styles from './BarcodeScanner.module.css'
 
 // Throttle the detect loop to ~9 attempts/sec, paced with a recursive setTimeout (the next
@@ -12,6 +13,9 @@ const DETECT_INTERVAL_MS = 110
 const VOTE_WINDOW = 5
 const VOTE_NEEDED = 2
 
+// Diagnostics: send the camera data again this often, as focus and frame size can change.
+const CAMERA_REPORT_MS = 2000
+
 export interface LiveScannerProps {
   /**
    * Called once with a barcode in the stored form that passed the check digit and the frame
@@ -20,6 +24,8 @@ export interface LiveScannerProps {
   onDetected: (barcode: string) => void
   /** Called if the camera can't be started. */
   onError: (message: string) => void
+  /** Diagnostics: receives the camera data and every raw read. The scanner then keeps scanning after a code is accepted. */
+  debug?: ScanDebugSink
 }
 
 /**
@@ -27,7 +33,7 @@ export interface LiveScannerProps {
  * getUserMedia + a <video> element, with continuous autofocus, higher resolution, and a
  * torch toggle where supported. Used wherever `supportsNativeBarcodeDetector()` is true.
  */
-export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) {
+export function NativeBarcodeScanner({ onDetected, onError, debug }: LiveScannerProps) {
   const [torchSupported, setTorchSupported] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -48,6 +54,10 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
   onDetectedRef.current = onDetected
   const onErrorRef = useRef(onError)
   onErrorRef.current = onError
+  const debugRef = useRef(debug)
+  debugRef.current = debug
+  const startedAtRef = useRef(0)
+  const reportedAtRef = useRef(0)
 
   // Idempotent teardown: invalidate any in-flight async work (epoch bump), cancel the loop,
   // turn the torch off, release every camera track, and detach the stream from the <video>.
@@ -72,6 +82,33 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
     setTorchSupported(false)
   }, [])
 
+  // Diagnostics: what the camera really delivers. Read again every CAMERA_REPORT_MS.
+  const reportCamera = useCallback(async () => {
+    const sink = debugRef.current
+    const track = trackRef.current
+    const video = videoRef.current
+    if (!sink || !track || !video) return
+    reportedAtRef.current = performance.now()
+    let devices: string[] = []
+    try {
+      devices = (await navigator.mediaDevices.enumerateDevices())
+        .filter((d) => d.kind === 'videoinput')
+        .map((d) => d.label || '(no label)')
+    } catch { /* ignore */ }
+    let formats: string[] = []
+    try { formats = await BarcodeDetector.getSupportedFormats() } catch { /* ignore */ }
+    const rect = video.getBoundingClientRect()
+    sink.camera({
+      label: track.label,
+      settings: { ...track.getSettings() } as Record<string, unknown>,
+      capabilities: (track.getCapabilities?.() ?? {}) as Record<string, unknown>,
+      devices,
+      video: { width: video.videoWidth, height: video.videoHeight },
+      view: { width: Math.round(rect.width), height: Math.round(rect.height), dpr: window.devicePixelRatio },
+      formats,
+    })
+  }, [])
+
   // Self-rescheduling detection loop. `epoch` is captured per start; if a teardown or restart
   // happens, the epoch no longer matches and the loop (or a late-resolving detect()) bails.
   const detectLoop = useCallback(async (epoch: number) => {
@@ -82,16 +119,31 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
     if (video && detector && !detectingRef.current && video.readyState >= video.HAVE_CURRENT_DATA) {
       detectingRef.current = true
       try {
+        const detectStart = performance.now()
         const results = await detector.detect(video)
+        const detectMs = performance.now() - detectStart
         // Guard: this detect() may have resolved after teardown — do nothing if so.
         if (epoch !== epochRef.current || !runningRef.current) return
-        let code: string | null = null
-        for (const r of results) {
-          code = readRetailBarcode(r.rawValue, r.format)
-          if (code) break
-        }
+        const reads: FrameRead[] = results.map((r) => ({
+          raw: r.rawValue,
+          format: r.format,
+          code: readRetailBarcode(r.rawValue, r.format),
+        }))
+        const code = reads.find((r) => r.code)?.code ?? null
         const accepted = voteRef.current.add(code)
-        if (accepted) {
+        const sink = debugRef.current
+        if (sink) {
+          // Diagnostics: log the frame and keep scanning, also after an accepted code.
+          sink.frame({
+            t: performance.now() - startedAtRef.current,
+            ms: detectMs,
+            reads,
+            votes: code ? voteRef.current.count(code) : 0,
+            accepted,
+          })
+          if (accepted) voteRef.current.clear()
+          if (performance.now() - reportedAtRef.current > CAMERA_REPORT_MS) void reportCamera()
+        } else if (accepted) {
           if (scannedRef.current) return
           scannedRef.current = true
           stopCamera()
@@ -109,7 +161,7 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
     // we must not leave a stray timer behind once the camera has stopped.
     if (epoch !== epochRef.current || !runningRef.current) return
     loopTimerRef.current = setTimeout(() => { detectLoopRef.current(epoch) }, DETECT_INTERVAL_MS)
-  }, [stopCamera])
+  }, [stopCamera, reportCamera])
   detectLoopRef.current = detectLoop
 
   const startCamera = useCallback(async () => {
@@ -183,8 +235,10 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
 
     runningRef.current = true
     detectingRef.current = false
+    startedAtRef.current = performance.now()
+    void reportCamera()
     loopTimerRef.current = setTimeout(() => { detectLoopRef.current(myEpoch) }, DETECT_INTERVAL_MS)
-  }, [stopCamera])
+  }, [stopCamera, reportCamera])
 
   const toggleTorch = useCallback(async () => {
     const track = trackRef.current

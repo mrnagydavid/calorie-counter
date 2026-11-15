@@ -39,6 +39,21 @@
   font-weight: 700;
 }
 
+/* Scanner diagnostics toggle (temporary) */
+.debugButton {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  font-size: 20px;
+  opacity: 0.35;
+}
+
+.debugOn {
+  opacity: 1;
+  background: var(--color-bg-secondary);
+}
+
 .body {
   flex: 1;
   padding: 0 16px 16px;
