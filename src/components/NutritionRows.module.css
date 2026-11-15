@@ -11,6 +11,23 @@
   align-items: baseline;
   gap: 12px;
   font-size: 15px;
+  color: var(--color-text);
+}
+
+/* Today: the rows reach 6px past the content on each side, so the grey of an open row has
+   room around its text. The row padding replaces the gap, so the spacing stays the same. */
+.tapRows {
+  gap: 0;
+  margin: 0 -6px;
+}
+
+.tapRows .row,
+.tapRows .subRow {
+  padding: 2px 6px;
+}
+
+.tapRows .subRow {
+  padding-left: 22px;
 }
 
 .subRow {
@@ -28,13 +45,35 @@
   font-weight: 500;
 }
 
-/* With goals: label | bar | value. The label column fits the longest label. */
+/* With goals: label | bar | value. The label column fits the longest label. The rows reach
+   6px past the content on each side, as in .tapRows. */
 .grid {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr) max-content;
   column-gap: 12px;
-  row-gap: 6px;
   align-items: center;
+  margin: 0 -6px;
+}
+
+/* A row spans the grid and uses its columns, so the bars of all rows line up. The row
+   padding replaces a row gap, so a tap between two rows always hits one of them. */
+.gridRow {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  padding: 3px 6px;
+  color: var(--color-text);
+}
+
+.tappable {
+  width: 100%;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.open {
+  background: #f3f4f6;
 }
 
 .label,
@@ -63,4 +102,45 @@
   white-space: nowrap;
   text-align: right;
   color: var(--color-text-secondary);
+}
+
+/* The foods behind a row, under it. As wide as the rows, which reach 6px past the content. */
+.sources {
+  grid-column: 1 / -1;
+  margin: 4px 0 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.source {
+  display: grid;
+  padding: 5px 0;
+  grid-template-columns: minmax(0, 1fr) auto 36px;
+  column-gap: 12px;
+  align-items: baseline;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.sourceName {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.times,
+.sourceShare {
+  color: var(--color-text-secondary);
+}
+
+.sourceAmount,
+.sourceShare {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sourceAmount {
+  font-weight: 500;
 }

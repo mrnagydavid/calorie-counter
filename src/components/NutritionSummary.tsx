@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import type { DailyTarget, GoalKey, IntakeEntry } from '../db/index'
 import { kcalCoverage, liveGoals, type LiveGoal } from '../utils/goalProgress'
 import { GOALS } from '../utils/goals'
+import { foodSources, type FoodSource } from '../utils/foodSources'
 import { NUTRIENT_KEYS, formatNutrient, knownTotals, sumNutrients, type NutrientKey } from '../utils/nutrients'
 import { goalNotes, liveBar, type GoalBarData } from './GoalBar'
 import { GoalNotes } from './GoalNotes'
@@ -60,6 +61,15 @@ function goalBars(goals: LiveGoal[]) {
   return bars
 }
 
+const SOURCE_ROWS: RowKey[] = [...NUTRIENT_KEYS, 'unsaturated']
+
+/** The foods behind each row, for the list that opens under a tapped row. */
+function rowSources(intakes: IntakeEntry[]) {
+  const sources: Partial<Record<RowKey, FoodSource[]>> = {}
+  for (const key of SOURCE_ROWS) sources[key] = foodSources(intakes, key)
+  return sources
+}
+
 interface NutritionSummaryProps {
   intakes: IntakeEntry[]
   /** The day's row, with its copy of the goals. */
@@ -83,7 +93,9 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit, open
   const hasBars = Object.keys(bars).length > 0
   const hasHabitGoal = Object.values(bars).some((b) => b.kind === 'habit')
   const coverage = kcalCoverage(intakes)
+  const sources = rowSources(intakes)
   const notes = goalNotes(goals, plannedKcal)
+  if (Object.values(sources).some((foods) => foods.length > 0)) notes.push('Tap a nutrient to see the foods it came from.')
   if (hasHabitGoal) {
     notes.push(
       'Some of these goals are judged on your average over weeks, not on one day. You can follow them best on the Overview.',
@@ -113,7 +125,7 @@ export function NutritionSummary({ intakes, row, burned, isToday, saltUnit, open
         <div class={styles.content}>
           {hasData ? (
             <>
-              <NutritionRows {...knownTotals(sums)} goals={bars} saltUnit={saltUnit} />
+              <NutritionRows {...knownTotals(sums)} goals={bars} saltUnit={saltUnit} sources={sources} />
               <GoalNotes notes={notes} warning={warning} />
             </>
           ) : (

@@ -141,6 +141,15 @@ export function dayGoal(day: DayData, key: GoalKey): DayGoal | undefined {
   return { amount: goalTotal(sumNutrients(day.intakes), key).total, grams, kcal }
 }
 
+/**
+ * The days behind a period's amount on the goal screen: the counted days with the goal, or,
+ * before any day had the goal, the counted days with a row. The same days as the boxes there.
+ */
+export function amountDays(days: DayData[], key: GoalKey): DayData[] {
+  const withGoal = days.filter((d) => dayGoal(d, key) !== undefined)
+  return withGoal.length > 0 ? withGoal : days.filter((d) => d.row && isCounted(d.intakes, key))
+}
+
 export type GoalStatus = 'within' | 'above' | 'below'
 
 export function statusOf(amount: number, grams: GramRange): GoalStatus {

@@ -15,6 +15,7 @@ import {
 } from '../utils/goalProgress'
 import { describeGoal, GOALS, matchPreset, SODIUM_MG_PER_SALT_G, UNIT_OPTIONS } from '../utils/goals'
 import { EditScreen } from './EditScreen'
+import { TopSources } from './TopSources'
 import { capitalize, CAVEAT, CLOSE_RULE, COUNT_RULE, STATUS_TEXT } from './goalTexts'
 import styles from './GoalDetail.module.css'
 
@@ -51,6 +52,7 @@ export function GoalDetail(props: GoalDetailProps) {
       </div>
       <p class={styles.caveat}>{CAVEAT}</p>
       {config.kind === 'habit' ? <HabitDetail {...props} /> : <DailyDetail {...props} />}
+      <TopSources goalKey={goalKey} days={props.days} today={props.today} saltUnit={saltUnit} />
     </EditScreen>
   )
 }
