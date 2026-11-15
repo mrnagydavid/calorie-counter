@@ -6,19 +6,11 @@
 // noticeably better at recognition; html5-qrcode (ZXing-js) is the iOS fallback.
 
 /**
- * Retail product barcode formats. The numeric-length check in `isValidBarcode`
- * does the final validation, so this list just narrows what the decoder looks for
- * (fewer false reads, no QR/data-matrix work).
+ * Retail product barcode formats. ITF and Code 128 are left out: retail packs do not use them,
+ * and ITF has no required check digit, so its misreads pass as valid codes.
+ * `readRetailBarcode` checks each read.
  */
-export const SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'itf']
-
-const VALID_BARCODE_LENGTHS = new Set([8, 12, 13, 14])
-
-/** A decoded value is a plausible product barcode only if it's all-digits of a retail length. */
-export function isValidBarcode(s: string): boolean {
-  const trimmed = s.trim()
-  return /^\d+$/.test(trimmed) && VALID_BARCODE_LENGTHS.has(trimmed.length)
-}
+export const SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e']
 
 let cached: Promise<boolean> | null = null
 

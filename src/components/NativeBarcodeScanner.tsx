@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
-import { SCAN_FORMATS, isValidBarcode } from '../services/barcodeDetector'
+import { SCAN_FORMATS } from '../services/barcodeDetector'
+import { createReadVote, readRetailBarcode } from '../utils/barcode'
 import styles from './BarcodeScanner.module.css'
 
 // Throttle the detect loop to ~9 attempts/sec, paced with a recursive setTimeout (the next
 // attempt is scheduled only after the current finishes) so a slow frame can't pile up calls.
 const DETECT_INTERVAL_MS = 110
 
+// A code must show up in 2 of the last 5 frames. This adds about 0.1–0.5 s, and it skips the
+// blurred frames while the camera focuses.
+const VOTE_WINDOW = 5
+const VOTE_NEEDED = 2
+
 export interface LiveScannerProps {
-  /** Called once with a validated barcode; the camera is already stopped by the time this fires. */
+  /**
+   * Called once with a barcode in the stored form that passed the check digit and the frame
+   * vote. The camera is already stopped by the time this fires.
+   */
   onDetected: (barcode: string) => void
   /** Called if the camera can't be started. */
   onError: (message: string) => void
@@ -30,6 +39,7 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
   const runningRef = useRef(false)
   const epochRef = useRef(0)
   const detectingRef = useRef(false)
+  const voteRef = useRef(createReadVote(VOTE_WINDOW, VOTE_NEEDED))
   // Self/forward references the detect loop needs, kept in refs so the loop's useCallback can
   // list honest deps without a TDZ and stays stable across renders.
   const detectLoopRef = useRef<(epoch: number) => void>(() => {})
@@ -75,12 +85,17 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
         const results = await detector.detect(video)
         // Guard: this detect() may have resolved after teardown — do nothing if so.
         if (epoch !== epochRef.current || !runningRef.current) return
-        const hit = results.find((r) => isValidBarcode(r.rawValue))
-        if (hit) {
+        let code: string | null = null
+        for (const r of results) {
+          code = readRetailBarcode(r.rawValue, r.format)
+          if (code) break
+        }
+        const accepted = voteRef.current.add(code)
+        if (accepted) {
           if (scannedRef.current) return
           scannedRef.current = true
           stopCamera()
-          onDetectedRef.current(hit.rawValue.trim())
+          onDetectedRef.current(accepted)
           return
         }
       } catch {
@@ -103,6 +118,7 @@ export function NativeBarcodeScanner({ onDetected, onError }: LiveScannerProps) 
 
     stopCamera()
     scannedRef.current = false
+    voteRef.current.clear()
     const myEpoch = ++epochRef.current
 
     let stream: MediaStream

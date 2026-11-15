@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { db, type Nutrients } from '../db/index'
 import { entryNutrients } from '../utils/nutrients'
 import { lookupBarcode, type CalorieVariant, type OFFProduct, type LookupError } from '../services/openfoodfacts'
-import { isValidBarcode, supportsNativeBarcodeDetector } from '../services/barcodeDetector'
+import { supportsNativeBarcodeDetector } from '../services/barcodeDetector'
+import { isValidBarcode, normalizeBarcode } from '../utils/barcode'
 import { FoodSpinner } from './FoodSpinner'
 import { NativeBarcodeScanner } from './NativeBarcodeScanner'
 import styles from './BarcodeScanner.module.css'
@@ -85,7 +86,9 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
     setState({ step: 'error', message })
   }, [])
 
-  const handleBarcode = useCallback(async (barcode: string) => {
+  const handleBarcode = useCallback(async (input: string) => {
+    // Scans arrive in the stored form already. A typed code may be a 12-digit UPC-A.
+    const barcode = normalizeBarcode(input)
     setState({ step: 'scanning', loading: true })
 
     // Abort any previous in-flight lookup
@@ -342,7 +345,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
                     class={styles.amountInput}
                     value={manualBarcode}
                     onInput={(e) => setManualBarcode((e.target as HTMLInputElement).value)}
-                    placeholder="e.g. 7622210100234"
+                    placeholder="e.g. 7622210100238"
                     style={{ flex: 1 }}
                   />
                   <button type="submit" class={styles.manualButton} disabled={!isValidBarcode(manualBarcode)}>
@@ -474,7 +477,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
                   class={styles.amountInput}
                   value={manualBarcode}
                   onInput={(e) => setManualBarcode((e.target as HTMLInputElement).value)}
-                  placeholder="e.g. 7622210100234"
+                  placeholder="e.g. 7622210100238"
                   style={{ flex: 1 }}
                 />
               </div>
@@ -504,7 +507,7 @@ export function BarcodeScanner({ date, onClose, onAddEntry, onAddManually }: Bar
                   class={styles.amountInput}
                   value={manualBarcode}
                   onInput={(e) => setManualBarcode((e.target as HTMLInputElement).value)}
-                  placeholder="e.g. 7622210100234"
+                  placeholder="e.g. 7622210100238"
                   style={{ flex: 1 }}
                 />
               </div>

@@ -231,7 +231,7 @@ export function FoodForm({
           class={styles.barcodeInput}
           value={barcode}
           onInput={(e) => onBarcodeChange?.((e.target as HTMLInputElement).value)}
-          placeholder="e.g. 7622210100234"
+          placeholder="e.g. 7622210100238"
         />
         {barcode.length > 0 && (
           <button

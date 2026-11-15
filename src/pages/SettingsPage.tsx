@@ -5,6 +5,7 @@ import { clearInstallPrompt, getInstallPrompt } from '../components/InstallBanne
 import { NumericInput } from '../components/NumericInput'
 import { NutritionGoalsSection } from '../components/NutritionGoalsSection'
 import { updateTodayTarget } from '../db/dailyTargets'
+import { mergeBarcodeCacheRows, withNormalizedBarcode } from '../db/barcodes'
 import { db, type DayOfWeek } from '../db/index'
 import {
   cleanOverrides,
@@ -260,11 +261,12 @@ function DataManagementSection() {
           await db.barcodeCache.clear()
           await db.weightEntries.clear()
           if (data.settings?.length) await db.settings.bulkAdd(data.settings)
-          if (data.intakeEntries?.length) await db.intakeEntries.bulkAdd(data.intakeEntries)
+          // A backup from before barcodes had one form: convert them, as the schema upgrade does.
+          if (data.intakeEntries?.length) await db.intakeEntries.bulkAdd(data.intakeEntries.map(withNormalizedBarcode))
           if (data.burnEntries?.length) await db.burnEntries.bulkAdd(data.burnEntries)
-          if (data.customFoods?.length) await db.customFoods.bulkAdd(data.customFoods)
+          if (data.customFoods?.length) await db.customFoods.bulkAdd(data.customFoods.map(withNormalizedBarcode))
           if (data.dailyTargets?.length) await db.dailyTargets.bulkAdd(data.dailyTargets)
-          if (data.barcodeCache?.length) await db.barcodeCache.bulkAdd(data.barcodeCache)
+          if (data.barcodeCache?.length) await db.barcodeCache.bulkAdd(mergeBarcodeCacheRows(data.barcodeCache))
           if (data.weightEntries?.length) await db.weightEntries.bulkAdd(data.weightEntries)
         },
       )

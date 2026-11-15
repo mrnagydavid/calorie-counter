@@ -1,3 +1,4 @@
+import { normalizeBarcode } from '../utils/barcode'
 import { db, type Nutrients } from './index'
 
 /**
@@ -20,7 +21,8 @@ interface SubmittedFood {
 export async function applyCustomFoodAction(food: SubmittedFood): Promise<void> {
   const id = food.existingCustomFoodId
   const name = food.name.trim()
-  const barcode = food.barcode || undefined
+  // The stored form, so a later scan of the same code finds this food.
+  const barcode = normalizeBarcode(food.barcode) || undefined
 
   switch (food.customFoodAction) {
     case 'add':

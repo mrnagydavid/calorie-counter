@@ -1,4 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
+import { normalizeBarcode } from '../utils/barcode'
+import { mergeBarcodeCacheRows } from './barcodes'
 
 export type DayOfWeek =
   | 'monday'
@@ -163,4 +165,22 @@ db.version(3).stores({
 
 db.version(4).stores({
   weightEntries: 'id, date, createdAt',
+})
+
+// Barcodes in one form (see `normalizeBarcode`): before this, a saved UPC-A code could have
+// 12 digits and a later scan of it 13, so they did not match.
+db.version(5).stores({}).upgrade(async (tx) => {
+  await tx.table<CustomFood>('customFoods').toCollection().modify((food) => {
+    if (food.barcode) food.barcode = normalizeBarcode(food.barcode)
+  })
+  await tx.table<IntakeEntry>('intakeEntries').toCollection().modify((entry) => {
+    if (entry.barcode) entry.barcode = normalizeBarcode(entry.barcode)
+  })
+  const cache = tx.table<BarcodeCacheEntry, string>('barcodeCache')
+  const rows = await cache.toArray()
+  const merged = mergeBarcodeCacheRows(rows)
+  if (merged.length !== rows.length || merged.some((row, i) => row.barcode !== rows[i].barcode)) {
+    await cache.clear()
+    await cache.bulkAdd(merged)
+  }
 })

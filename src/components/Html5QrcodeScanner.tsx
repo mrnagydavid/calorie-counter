@@ -1,6 +1,6 @@
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { useEffect, useRef } from 'preact/hooks'
-import { isValidBarcode } from '../services/barcodeDetector'
+import { createReadVote, readRetailBarcode } from '../utils/barcode'
 import type { LiveScannerProps } from './NativeBarcodeScanner'
 import styles from './BarcodeScanner.module.css'
 
@@ -10,9 +10,12 @@ const FORMATS = [
   Html5QrcodeSupportedFormats.EAN_8,
   Html5QrcodeSupportedFormats.UPC_A,
   Html5QrcodeSupportedFormats.UPC_E,
-  Html5QrcodeSupportedFormats.CODE_128,
-  Html5QrcodeSupportedFormats.ITF,
 ]
+
+// ZXing-js accepts a code from a single decoded row, so ask for 3 of the last 5 frames
+// (the native scanner needs 2).
+const VOTE_WINDOW = 5
+const VOTE_NEEDED = 3
 
 /**
  * Live scanner backed by html5-qrcode (ZXing-js). Used on platforms without a usable native
@@ -30,6 +33,7 @@ export function Html5QrcodeScanner({ onDetected, onError }: LiveScannerProps) {
 
     container.innerHTML = ''
     scannedRef.current = false
+    const vote = createReadVote(VOTE_WINDOW, VOTE_NEEDED)
     const readerId = `reader-${Date.now()}`
     const el = document.createElement('div')
     el.id = readerId
@@ -41,16 +45,19 @@ export function Html5QrcodeScanner({ onDetected, onError }: LiveScannerProps) {
     scanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 250, height: 150 } },
-      (decodedText) => {
+      (decodedText, decodedResult) => {
         if (scannedRef.current) return
-        const trimmed = decodedText.trim()
-        if (!isValidBarcode(trimmed)) return
+        // html5-qrcode names formats like "EAN_13"; readRetailBarcode uses BarcodeDetector names.
+        const format = decodedResult.result.format?.formatName.toLowerCase() ?? ''
+        const accepted = vote.add(readRetailBarcode(decodedText, format))
+        if (!accepted) return
         scannedRef.current = true
         runningRef.current = false
         scanner.stop().catch(() => {})
-        onDetected(trimmed)
+        onDetected(accepted)
       },
-      undefined,
+      // Called for each frame with no code: a vote against the codes in the window.
+      () => { vote.add(null) },
     ).then(() => {
       runningRef.current = true
     }).catch((err) => {

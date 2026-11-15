@@ -2,6 +2,7 @@ import { useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { db } from '../db/index'
 import { applyCustomFoodAction } from '../db/customFoods'
+import { normalizeBarcode } from '../utils/barcode'
 import { entryNutrients } from '../utils/nutrients'
 import { FoodPicker, type FoodPickerResult } from '../components/FoodPicker'
 
@@ -18,7 +19,7 @@ export function AddIntakePage({ date = '' }: AddIntakePageProps) {
 
   const handleSelect = useCallback(async (result: FoodPickerResult) => {
     // The form owns the barcode from here on, so clearing the field clears it everywhere.
-    const barcode = result.barcode || undefined
+    const barcode = normalizeBarcode(result.barcode) || undefined
 
     await db.intakeEntries.add({
       id: crypto.randomUUID(),

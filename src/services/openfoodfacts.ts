@@ -1,4 +1,5 @@
 import { db, type Nutrients } from '../db/index'
+import { normalizeBarcode } from '../utils/barcode'
 import { hasNutrients, roundNutrients } from '../utils/nutrients'
 
 // Current barcodeCache row version. Older rows have no nutrients.
@@ -182,7 +183,9 @@ async function fetchFromOFF(barcode: string, signal?: AbortSignal): Promise<Look
   }
 }
 
-export async function lookupBarcode(barcode: string, signal?: AbortSignal): Promise<LookupResult> {
+export async function lookupBarcode(input: string, signal?: AbortSignal): Promise<LookupResult> {
+  // The cache is keyed by the stored form. Open Food Facts accepts it too.
+  const barcode = normalizeBarcode(input)
   // 1. Check cache. A row below the current version has no nutrients: fetch it again.
   const cached = await db.barcodeCache.get(barcode)
   const cachedResult: LookupResult | undefined = cached && {
