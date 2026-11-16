@@ -27,6 +27,7 @@ type PeriodDays = (typeof PERIODS)[number]
 export function TopSources({ goalKey, days, today, saltUnit }: TopSourcesProps) {
   const [period, setPeriod] = useState<PeriodDays>(7)
   const sodium = goalKey === 'salt' && saltUnit === 'sodium'
+  const nutrient = sodium ? 'sodium' : GOALS[goalKey].title.toLowerCase()
   const periodDays = daysBefore(today, period).map((d) => days.get(d)).filter((d) => d !== undefined)
   return (
     <div class={styles.block}>
@@ -51,9 +52,16 @@ export function TopSources({ goalKey, days, today, saltUnit }: TopSourcesProps) 
         days={periodDays}
         goalKey={goalKey}
         sodium={sodium}
-        name={sodium ? 'sodium' : GOALS[goalKey].title.toLowerCase()}
+        name={nutrient}
       />
-      <p class={styles.rule}>The amounts are an average per day. {COUNT_RULE}</p>
+      <div class={styles.notes}>
+        {/* Why the list is in this order, and not by the amount on the days a food was eaten */}
+        <p class={styles.rule}>
+          The amounts on the right show how much each food adds to your daily average. A food with a lot of {nutrient} that you
+          eat once a week can be less important than a food with less {nutrient} that you eat every day.
+        </p>
+        <p class={styles.rule}>{COUNT_RULE}</p>
+      </div>
     </div>
   )
 }
@@ -102,7 +110,9 @@ function Period({ label, days, goalKey, sodium, name }: PeriodProps) {
               <span class={styles.nameCell}>
                 <span class={styles.name}>{food.name}</span>
                 <span class={styles.days}>
-                  on {food.days} {food.days === 1 ? 'day' : 'days'}
+                  {food.days === 1
+                    ? `on 1 day, ${amountText(food.amount, sodium)}`
+                    : `on ${food.days} days, ${amountText(food.amount / food.days, sodium)} each`}
                 </span>
               </span>
               <span class={styles.amount}>{perDay(food.amount)}</span>

@@ -129,6 +129,12 @@
   color: var(--color-text-secondary);
 }
 
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .rule {
   font-size: 12px;
   color: var(--color-text-secondary);
