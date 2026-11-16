@@ -490,7 +490,6 @@ export function FoodPicker({
   const handleBack = queue ? handleQueueBack : selecting ? stopSelecting : onClose
   const pickingRecents = selecting && !queue
   const isLastInQueue = !!queue && queueIndex === queue.length - 1
-  const nextInQueue = queue && !isLastInQueue ? queue[queueIndex + 1] : null
   const otherQueueCalories = queue
     ? queue.reduce((sum, item, i) => (i === queueIndex ? sum : sum + (item.result?.calories ?? 0)), 0)
     : 0
@@ -640,7 +639,7 @@ export function FoodPicker({
               existingCustomFoodId={formFill?.customFoodId}
               hideFoodDetails={!!formFill && !editing}
               submitLabel={queue
-                ? (nextInQueue ? `Next: ${nextInQueue.result?.name ?? nextInQueue.fill.name}` : entriesLabel(queue.length))
+                ? (isLastInQueue ? entriesLabel(queue.length) : 'Next')
                 : submitLabel}
               showSaveAndAddNew={showSaveAndAddNew && !queue}
               onSubmit={queue ? handleQueueSubmit : handleSubmit}
